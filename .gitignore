@@ -1,0 +1,8 @@
+/.DS_Store
+/node_modules
+/out
+/temp
+/workspace.code-workspace
+/builds/separate
+/builds/test
+/builds/together
