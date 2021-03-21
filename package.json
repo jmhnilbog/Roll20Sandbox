@@ -1,5 +1,21 @@
 {
-  "dependencies": {
-    "typescript": "^4.2.3"
-  }
+    "dependencies": {
+        "@vercel/ncc": "^0.27.0",
+        "typescript": "^4.2.3",
+        "underscore": "^1.12.1",
+        "uuid": "^8.3.2"
+    },
+    "devDependencies": {
+        "@types/chai": "^4.2.15",
+        "@types/mocha": "^8.2.2",
+        "@types/underscore": "^1.11.0",
+        "@types/uuid": "^8.3.0",
+        "chai": "^4.3.4",
+        "mocha": "^8.3.2",
+        "ts-node": "^9.1.1"
+    },
+    "scripts": {
+        "build": "ncc build src/Elfward/index.ts -o build && ${PWD}/bin/alter_ncc_output.sh",
+        "test": "TS_NODE_FILES=true mocha -r ts-node/register src/**/*.spec.ts"
+    }
 }
