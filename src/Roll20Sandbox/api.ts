@@ -341,11 +341,35 @@ export const createRoll20Sandbox = ({
         }
     })
 
+    const _registerCommand = (name: string, handler: Function) => {
+        logger?.info('registering command ' + name)
+        sandbox.on('chat:message', (msg: ChatMessage) => {
+            if (msg.type !== 'api') {
+                return
+            }
+            logger?.info(msg.content)
+            if (msg.content.indexOf(name) !== 1) {
+                return
+            }
+
+            logger?.info('invoked' + name)
+
+            // @ts-ignore
+            const [command, ...args] = msg.content.splitArgs()
+
+            logger?.info('split up command' + args.length)
+
+            handler(...args)
+        })
+    }
+
     return {
         ...realSandbox,
         _fireEvent,
+        _registerCommand,
     } as typeof sandbox & {
         _fireEvent: typeof _fireEvent
+        _registerCommand: typeof _registerCommand
     }
 }
 
