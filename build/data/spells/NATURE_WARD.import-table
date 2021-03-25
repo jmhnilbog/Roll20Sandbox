@@ -1,0 +1,44 @@
+!import-table --DCC-SPELL-NATURE_WARD-MANIFESTATION --show
+!import-table-item --DCC-SPELL-NATURE_WARD-MANIFESTATION --a ring of mushrooms grows at the edge of the range --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-MANIFESTATION --a breeze from all directions caresses the caster --1 --
+
+
+!import-table --DCC-SPELL-NATURE_WARD-CORRUPTION --show
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --caster takes on a minor facial trait of the animal instead of summoning it --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --caster emits an odor strange to humanoids but irresistable to animals --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MINOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MINOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MINOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MAJOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MAJOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>GREATER-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+
+
+!import-table --DCC-SPELL-NATURE_WARD-MISFIRE --show
+!import-table-item --DCC-SPELL-NATURE_WARD-MISFIRE --Caster summons a swarm of annoying insects --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-MISFIRE --Caster banishes instead! Familiar or nearest animal vanishes for <%%91%%><%%91%%>1d4<%%93%%><%%93%%> rounds, returning dirty, wet, and angry --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-MISFIRE --Caster summons part of an animal, in a gross way --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-MISFIRE --Caster summons an animal, but partially intersecting other matter, killing it instantly and making it difficult to recover --1 --
+
+
+!import-table --DCC-SPELL-NATURE_WARD-CAST --show
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --2=Lost! Failure. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --12=The caster summons **1 mundane animal of 1HD** or less, which remains **for 1 hour** and obeys commands within reason. Orders contrary to the animal′s nature have a **50% chance of releasing the animal from service** and returning it to its place of origin. The **caster cannot directly harm the animal**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --14=The caster summons **up to 2 mundane animals of a total of 2HD** or less. They remain for **1 hour** and obey commands within reason. Orders contrary to the animals′ natures have a **50% chance of releasing the animals from service** and returning them to their place of origin. The **caster may not directly harm the animals**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --18=The caster summons **up to 2 mundane animals of a total of 2HD** or less. They remain for **2 hours** and obey commands within reason. Orders contrary to the animals′ natures have a **25% chance of releasing the animals from service** and returning them to their place of origin. The **caster may not directly harm the animals**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --20=The caster summons **up to 4 mundane animals of a total of 4HD** or less. They remain for **2 hours** and obey commands within reason. Orders contrary to the animals′ natures have a **25% chance of releasing the animals from service** and returning them to their place of origin. The **caster may not directly harm the animals**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --24=The caster summons **up to 8 mundane animals of a total of 8HD** or less. They remain for **2 hours** and obey commands within reason. Orders contrary to the animals′ natures have a **25% chance of releasing the animals from service** and returning them to their place of origin. The **caster may not directly harm the animals**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --28=The caster summons **up to 8 mundane animals of a total of 8HD** or less. They remain for **1 day** and obey commands within reason. Orders contrary to the animals′ natures have a **10% chance of releasing the animals from service** and returning them to their place of origin. The **caster may not directly harm the animals**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --30=The caster summons **up to 16 mundane animals of a total of 16HD** or less. They remain for **1 day** and obey commands within reason. Orders contrary to the animals′ natures have a **10% chance of releasing the animals from service** and returning them to their place of origin. The **caster may not directly harm the animals**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --32=The caster summons **a large group of a type of mundane animals with a total of 100HD** or less. They remain for **7 days** and **obey all commands of the caster, even suicidal ones**.The **caster may not directly harm the animals**. --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST ---Infinity=Lost! Failure! **Worse!** (DCC-SPELL-NATURE_WARD-CAST-1 <%%91%%><%%91%%>1d6+Luck<%%93%%><%%93%%>) --1 --
+
+
+!import-table --DCC-SPELL-NATURE_WARD-CAST-1 --show
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST-1 --1=(DCC-SPELL-NATURE_WARD-CORRUPTION) --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST-1 --3=<%%91%%><%%91%%>1t<%%91%%>PATRON-TAINT<%%93%%><%%93%%><%%93%%> or (DCC-SPELL-NATURE_WARD-CORRUPTION) --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST-1 --4=(DCC-SPELL-NATURE_WARD-MISFIRE) --1 --
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST-1 ---Infinity=(DCC-SPELL-NATURE_WARD-CORRUPTION) and (DCC-SPELL-NATURE_WARD-MISFIRE) and <%%91%%><%%91%%>1t<%%91%%>PATRON-TAINT<%%93%%><%%93%%><%%93%%> --1 --
+
+
+!import-table-item --DCC-SPELL-NATURE_WARD-CAST --[name=Nature Ward][level=Wizard 1][range=20′][timeToCast=1 round][save=Will][description=The caster repels mundane animals.\n] --1 --

@@ -1,1 +1,5 @@
-export { createRankedTableConstructor } from './createRankedTableConstructor'
+export { createRankedTableConstructor } from "./createRankedTableConstructor";
+
+import { createRankedTableConstructor } from "./createRankedTableConstructor";
+
+export const RankedTable = createRankedTableConstructor();

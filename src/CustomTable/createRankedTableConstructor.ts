@@ -1,63 +1,90 @@
-import { Logger } from '../Logger'
-import { Id } from '../Roll20Object/types'
-import { Sandbox } from '../Roll20Sandbox/api'
-import createCustomTableConstructor from './createCustomTableConstructor'
-import { RankedTableItem, RankedTableItemKey } from './types'
+import createCustomTableConstructor from "./createCustomTableConstructor";
+import { RankedTableItem, RankedTableItemKey } from "./types";
 
+import { Logger } from "../Logger";
+import { Id } from "../Roll20Object";
+import { Sandbox } from "../Roll20Sandbox";
+
+/**
+ * Creates a RankedTable constructor.
+ */
 export const createRankedTableConstructor = ({
     sandbox,
     logger,
 }: {
-    sandbox: Sandbox
-    logger?: Logger
-}) => {
+    sandbox?: Sandbox;
+    logger?: Logger;
+} = {}) => {
     const RankedTable = createCustomTableConstructor<
         RankedTableItem,
         RankedTableItemKey
     >({
         logger,
         sandbox,
-        parser: (obj, index) => {
-            const weight = obj.get('weight')
-            const name = obj.get('name')
-            const tmp = /^(.+)\^(.+)$/.exec(name)
+        /**
+         * The RankedTable parser splits a TableItem's name by the first
+         * instance of the supplied delimiter, into a number ("minValue")
+         * and a string ("result").
+         * @param obj - a tableitem
+         * @param index - the index at which the tableitem was found within the associated table.
+         * @param options.delimiter - a string, which must be escaped for RegExps.
+         */
+        parser: (
+            obj,
+            index,
+            {
+                delimiter = "=",
+            }: {
+                delimiter?: string;
+            } = {}
+        ) => {
+            const weight = obj.get("weight");
+            const name = obj.get("name");
+            const tmp = new RegExp(`^(.+?)${delimiter}(.+)$`).exec(name);
             const [minValue, result] = tmp
                 ? [tmp[1], tmp[2]]
-                : [undefined, name]
-            const asNumber = Number(minValue)
+                : [undefined, name];
+            const asNumber = Number(minValue);
             const parsed = {
                 tableItemId: obj.id,
                 tableIndex: index,
-                rollableTableId: obj.get('_rollabletableid') as Id,
+                rollableTableId: obj.get("_rollabletableid") as Id,
                 minValue: asNumber,
                 result,
                 weight,
-            }
+            } as const;
 
-            logger?.info(`Parsed ${JSON.stringify(obj)}`)
-            logger?.info(`into: ${JSON.stringify(parsed)}`)
-            return parsed
+            logger?.info(`Parsed ${JSON.stringify(obj)}`);
+            logger?.info(`into: ${JSON.stringify(parsed)}`);
+            return parsed;
         },
-        getter: (items, key) => {
-            logger?.info(`${items.length} items`)
+        /**
+         * The RankedTable getter finds the item with the least minValue equal to
+         * or less than the supplied key.
+         * @param items
+         * @param key
+         * @param options
+         */
+        getter: (items, key, options: any = {}) => {
+            logger?.info(`${items.length} items`);
             const pickable = items.filter(
-                (item) => typeof item.minValue !== 'undefined'
-            )
-            logger?.info(`${pickable.length} pickable items`)
+                (item) => typeof item.minValue !== "undefined"
+            );
+            logger?.info(`${pickable.length} pickable items`);
             const sorted = pickable.sort(
                 (a: any, b: any) => a.minValue - b.minValue
-            )
-            logger?.info(sorted)
-            let smallest = items[0]
-            let picked = smallest
-            let largest = items[items.length - 1]
+            );
+            logger?.info(sorted);
+            let smallest = items[0];
+            let picked = smallest;
+            // let largest = items[items.length - 1];
             sorted.forEach((item) => {
                 if (item.minValue <= key) {
-                    picked = item
+                    picked = item;
                 }
-            })
-            return [picked]
+            });
+            return [picked];
         },
-    })
-    return RankedTable
-}
+    });
+    return RankedTable;
+};

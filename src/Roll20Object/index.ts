@@ -1,11 +1,13 @@
 export {
     Roll20ObjectConstructor,
     Roll20ObjectInterface,
+    Roll20ObjectShapeTypeMap,
     Roll20ObjectType,
-} from './types'
-export { getShapeDefaults, Roll20ObjectShapeTypeMap } from './shapes'
-import { createRoll20ObjectCreator } from './Roll20Object'
+    PlayerId,
+    Id,
+} from "./types";
+export { getShapeDefaults } from "./shapes";
+export { createRoll20ObjectConstructor as createRoll20ObjectCreator } from "./Roll20Object";
 
-export type Roll20Object = ReturnType<typeof createRoll20ObjectCreator>
-
-export { createRoll20ObjectCreator } from './Roll20Object'
+import { createRoll20ObjectConstructor } from "./Roll20Object";
+export type Roll20Object = ReturnType<typeof createRoll20ObjectConstructor>;

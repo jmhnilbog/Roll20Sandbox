@@ -1,21 +1,46 @@
 {
+    "name": "roll20sandbox",
+    "version": "1.0.0",
+    "description": "Example roll20sandbox.",
+    "main": "build/index.js",
+    "directories": {
+        "lib": "lib",
+        "test": "test"
+    },
     "dependencies": {
         "@vercel/ncc": "^0.27.0",
+        "glob": "^7.1.6",
         "typescript": "^4.2.3",
         "underscore": "^1.12.1",
-        "uuid": "^8.3.2"
+        "yaml": "^1.10.2"
     },
     "devDependencies": {
         "@types/chai": "^4.2.15",
+        "@types/glob": "^7.1.3",
+        "@types/marked": "^2.0.0",
         "@types/mocha": "^8.2.2",
+        "@types/node": "^14.14.35",
         "@types/underscore": "^1.11.0",
-        "@types/uuid": "^8.3.0",
         "chai": "^4.3.4",
         "mocha": "^8.3.2",
         "ts-node": "^9.1.1"
     },
     "scripts": {
-        "build": "ncc build src/Elfward/index.ts -o build && ${PWD}/bin/alter_ncc_output.sh",
-        "test": "TS_NODE_FILES=true mocha -r ts-node/register src/**/*.spec.ts"
-    }
+        "build::js": "ncc build src/Elfward/index.ts -o build && bin/alter_ncc_output.sh",
+        "test": "TS_NODE_FILES=true mocha -r ts-node/register src/**/*.spec.ts",
+        "build::data": "bin/build_data.sh",
+        "build": "npm run build::js && npm run build::data",
+        "start::output": "node build/output.js",
+        "start::elfward": "TS_NODE_FILES=true ts-node src/Elfward/index.ts"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jmhnilbog/Roll20Sandbox.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/jmhnilbog/Roll20Sandbox/issues"
+    },
+    "homepage": "https://github.com/jmhnilbog/Roll20Sandbox#readme"
 }

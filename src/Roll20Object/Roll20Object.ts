@@ -1,6 +1,4 @@
-import { Logger } from '../Logger'
-import { Roll20EventName } from '../Roll20Sandbox/types'
-import { getShapeDefaults } from './shapes'
+import { getShapeDefaults } from "./shapes";
 import {
     Roll20ObjectType,
     Roll20ObjectShapeTypeMap,
@@ -8,15 +6,21 @@ import {
     EventGenerator,
     IdGenerator,
     Id,
-} from './types'
+} from "./types";
 
-const ImmutableFields = ['_id', '_type']
+import { Logger } from "../Logger";
+import { Roll20EventName } from "../Roll20Sandbox";
+
+// Fields that can't be changed in the normal ways.
+const ImmutableFields = ["_id", "_type"];
+
+// Additional rules applied to certain subtypes.
 const Rules: {
     [K in Roll20ObjectType]?: {
-        creatable?: boolean
-        maySetWithWorker?: boolean
-        asyncFields?: Partial<keyof Roll20ObjectShapeTypeMap[K]>[]
-    }
+        creatable?: boolean;
+        maySetWithWorker?: boolean;
+        asyncFields?: Partial<keyof Roll20ObjectShapeTypeMap[K]>[];
+    };
 } = {
     ability: {
         creatable: true,
@@ -26,11 +30,11 @@ const Rules: {
         creatable: true,
     },
     character: {
-        asyncFields: ['gmnotes', 'bio'],
+        asyncFields: ["gmnotes", "bio"],
         creatable: true,
     },
     handout: {
-        asyncFields: ['notes', 'gmnotes'],
+        asyncFields: ["notes", "gmnotes"],
         creatable: true,
     },
     macro: {
@@ -48,20 +52,23 @@ const Rules: {
     text: {
         creatable: true,
     },
-}
+};
 
-export const createRoll20ObjectCreator = ({
+/**
+ * Get a Roll20Object constructor.
+ */
+export const createRoll20ObjectConstructor = ({
     logger,
     idGenerator,
     pool,
     eventGenerator,
 }: {
-    logger?: Logger
-    idGenerator: IdGenerator
-    pool?: Record<string, any>
-    eventGenerator: EventGenerator
+    logger?: Logger;
+    idGenerator: IdGenerator;
+    pool?: Record<string, any>;
+    eventGenerator: EventGenerator;
 }) => {
-    const shapeDefaults = getShapeDefaults({ idGenerator })
+    const shapeDefaults = getShapeDefaults({ idGenerator });
 
     const Roll20Object = class Roll20Object<T extends Roll20ObjectType>
         implements
@@ -74,41 +81,41 @@ export const createRoll20ObjectCreator = ({
             type: T,
             obj: Partial<Roll20ObjectShapeTypeMap[T]>
         ) => {
-            return shapeDefaults[type](obj) as Roll20ObjectShapeTypeMap[T]
-        }
+            return shapeDefaults[type](obj) as Roll20ObjectShapeTypeMap[T];
+        };
 
-        _obj: Roll20ObjectShapeTypeMap[T]
+        _obj: Roll20ObjectShapeTypeMap[T];
         constructor(type: T, obj: Partial<Roll20ObjectShapeTypeMap[T]> = {}) {
             logger?.trace(
                 `Creating Roll20Object from: ${type}", ${JSON.stringify(obj)}".`
-            )
+            );
             this._obj = Roll20Object._createShape<T>(
                 type,
                 obj
-            ) as Roll20ObjectShapeTypeMap[T]
+            ) as Roll20ObjectShapeTypeMap[T];
         }
 
         get<K extends keyof Roll20ObjectShapeTypeMap[T]>(
             key: K,
             cb?: (x: any) => Roll20ObjectShapeTypeMap[T][K]
         ): Roll20ObjectShapeTypeMap[T][K] {
-            logger?.trace(`get(${key})`)
+            logger?.trace(`get(${key})`);
             if (Rules[this._obj._type]?.asyncFields?.includes(key as any)) {
                 if (!cb) {
-                    throw new Error(`Callback required to get key "#{key}".`)
+                    throw new Error(`Callback required to get key "#{key}".`);
                 }
             }
-            const value: Roll20ObjectShapeTypeMap[T][K] = this._obj[key]
+            const value: Roll20ObjectShapeTypeMap[T][K] = this._obj[key];
 
-            logger?.trace(`get(${key}) found "${value}".`)
+            logger?.trace(`get(${key}) found "${value}".`);
 
             // TODO: allow a delay before callback is called.
             //return (cb ? cb(value) : value) as S[K]
-            return value
+            return value;
         }
 
         get id() {
-            return this._obj._id as Id
+            return this._obj._id as Id;
         }
 
         /**
@@ -117,37 +124,37 @@ export const createRoll20ObjectCreator = ({
          */
         set<K extends keyof Roll20ObjectShapeTypeMap[T]>(
             changes: Partial<Roll20ObjectShapeTypeMap[T]>
-        ): void
+        ): void;
         set<K extends keyof Roll20ObjectShapeTypeMap[T]>(
             key: K,
             value: Roll20ObjectShapeTypeMap[T][K]
-        ): void
+        ): void;
         set<K extends keyof Roll20ObjectShapeTypeMap[T]>(
             changesOrKey: Partial<Roll20ObjectShapeTypeMap[T]> | K,
             value?: Roll20ObjectShapeTypeMap[T][K]
         ): void {
             const allChanges =
-                typeof changesOrKey !== 'object'
-                    ? ({
-                          [changesOrKey]: value,
-                      } as Partial<Roll20ObjectShapeTypeMap[T]>)
-                    : changesOrKey
+                typeof changesOrKey !== "object"
+                    ? ({ [changesOrKey]: value } as Partial<
+                          Roll20ObjectShapeTypeMap[T]
+                      >)
+                    : changesOrKey;
 
-            logger?.trace(`set(${JSON.stringify(allChanges)})`)
+            logger?.trace(`set(${JSON.stringify(allChanges)})`);
 
             Object.keys(allChanges).forEach((key) => {
                 if (ImmutableFields.includes(key as any)) {
-                    //logger.error(`You may not set key "${key}".`);
+                    logger?.error(`You may not set key "${key}".`);
                 } else {
                     // @ts-ignore
                     this._obj[key] =
-                        allChanges[key as keyof Roll20ObjectShapeTypeMap[T]]
+                        allChanges[key as keyof Roll20ObjectShapeTypeMap[T]];
 
                     eventGenerator(
                         `change:${this._obj._type}:${key}` as Roll20EventName
-                    )
+                    );
                 }
-            })
+            });
         }
 
         /**
@@ -156,61 +163,39 @@ export const createRoll20ObjectCreator = ({
          * @param changes
          */
         setWithWorker(changes: Partial<Roll20ObjectShapeTypeMap[T]>) {
-            logger?.trace(`setWithWorkers(${JSON.stringify(changes)})`)
-            if (this._obj._type !== 'attribute') {
+            logger?.trace(`setWithWorkers(${JSON.stringify(changes)})`);
+            if (this._obj._type !== "attribute") {
                 throw new Error(
                     `Can't call setWithWorker on non-attribute objects.`
-                )
+                );
             }
 
             Object.keys(changes).forEach((key) => {
                 if (ImmutableFields.includes(key as any)) {
-                    logger?.error(`You may not set key "${key}".`)
+                    logger?.error(`You may not set key "${key}".`);
                 } else {
                     // @ts-ignore
-                    this._obj[key] = changes[key]
+                    this._obj[key] = changes[key];
                 }
-            })
+            });
 
-            eventGenerator('sheetWorkerCompleted')
+            eventGenerator("sheetWorkerCompleted");
         }
         remove() {
-            logger?.trace(`remove()`)
+            logger?.trace(`remove()`);
 
             if (pool) {
                 if (pool[this.id] !== this) {
                     logger?.warn(
                         `Can't remove obj; id ${this._obj._id} not found in pool.`
-                    )
+                    );
                 }
-                delete pool[this.id]
+                delete pool[this.id];
             }
 
-            eventGenerator(`remove:${this._obj._type}` as Roll20EventName)
-            return this
+            eventGenerator(`remove:${this._obj._type}` as Roll20EventName);
+            return this;
         }
-    }
-    return Roll20Object
-}
-
-// type XXX = ReturnType<typeof createRoll20ObjectCreator>;
-
-// const Foo:Roll20ObjectConstructor<"campaign"> = (createRoll20ObjectCreator({
-//    eventGenerator: (eventName: string) => {},
-//    pool: {},
-//     idGenerator: () => " " as Id
-// }))
-
-// const foo: Roll20ObjectInterface<"campaign"> = new Foo("campaign")
-
-// type Roll20ObjectInterfaceTypeMap = {
-//     [K in Roll20ObjectType]:
-// }
-
-// const bar: Roll20ObjectConstructor = new (createRoll20ObjectCreator(
-//     {
-//         eventGenerator: (eventName: string) => {},
-//         pool: {},
-//         idGenerator: () => ' ' as Id,
-//     }
-// ))('campaign')
+    };
+    return Roll20Object;
+};

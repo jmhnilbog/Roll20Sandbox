@@ -1,0 +1,1 @@
+TS_NODE_FILES=true node_modules/.bin/ts-node bin/convertSpellData.ts

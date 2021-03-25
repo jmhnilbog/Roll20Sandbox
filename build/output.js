@@ -2,6 +2,567 @@ var __dirname = "";
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 79:
+/***/ (() => {
+
+// @ts-nocheck
+var bshields = bshields || {};
+if (!bshields.splitArgs) {
+  bshields.splitArgs = (function () {
+    "use strict";
+
+    var version = 1.1;
+
+    function splitArgs(input, separator) {
+      var singleQuoteOpen = false,
+        doubleQuoteOpen = false,
+        tokenBuffer = [],
+        ret = [],
+        arr = input.split(""),
+        element,
+        i,
+        matches;
+      separator = separator || /\s/g;
+
+      for (i = 0; i < arr.length; i++) {
+        element = arr[i];
+        matches = element.match(separator);
+        if (element === "'") {
+          if (!doubleQuoteOpen) {
+            singleQuoteOpen = !singleQuoteOpen;
+            continue;
+          }
+        } else if (element === '"') {
+          if (!singleQuoteOpen) {
+            doubleQuoteOpen = !doubleQuoteOpen;
+            continue;
+          }
+        }
+
+        if (!singleQuoteOpen && !doubleQuoteOpen) {
+          if (matches) {
+            if (tokenBuffer && tokenBuffer.length > 0) {
+              ret.push(tokenBuffer.join(""));
+              tokenBuffer = [];
+            }
+          } else {
+            tokenBuffer.push(element);
+          }
+        } else if (singleQuoteOpen || doubleQuoteOpen) {
+          tokenBuffer.push(element);
+        }
+      }
+      if (tokenBuffer && tokenBuffer.length > 0) {
+        ret.push(tokenBuffer.join(""));
+      }
+
+      return ret;
+    }
+
+    return splitArgs;
+  })();
+
+  String.prototype.splitArgs =
+    String.prototype.splitArgs ||
+    function (separator) {
+      return bshields.splitArgs(this, separator);
+    };
+}
+
+
+/***/ }),
+
+/***/ 574:
+/***/ (() => {
+
+// @ts-nocheck
+
+// Github:   https://github.com/shdwjk/Roll20API/blob/master/TableExport/TableExport.js
+// By:       The Aaron, Arcane Scriptomancer
+// Contact:  https://app.roll20.net/users/104025/the-aaron
+
+var TableExport =
+    TableExport ||
+    (function () {
+        "use strict";
+
+        var version = "0.2.4",
+            lastUpdate = 1576529132,
+            tableCache = {},
+            escapes = {
+                "[": "<%%91%%>",
+                "]": "<%%93%%>",
+                "--": "<%%-%%>",
+                " --": "[TABLEEXPORT:ESCAPE]",
+            },
+            esRE = function (s) {
+                var escapeForRegexp = /(\\|\/|\[|\]|\(|\)|\{|\}|\?|\+|\*|\||\.|\^|\$)/g;
+                return s.replace(escapeForRegexp, "\\$1");
+            },
+            ch = function (c) {
+                var entities = {
+                    "<": "lt",
+                    ">": "gt",
+                    "'": "#39",
+                    "@": "#64",
+                    "*": "ast",
+                    "`": "#96",
+                    "{": "#123",
+                    "|": "#124",
+                    "}": "#125",
+                    "[": "#91",
+                    "]": "#93",
+                    '"': "quot",
+                    "-": "mdash",
+                    " ": "nbsp",
+                };
+
+                if (_.has(entities, c)) {
+                    return "&" + entities[c] + ";";
+                }
+                return "";
+            },
+            checkInstall = function () {
+                log(
+                    "-=> TableExport v" +
+                        version +
+                        " <=-  [" +
+                        new Date(lastUpdate * 1000) +
+                        "]"
+                );
+            },
+            showHelp = function () {
+                sendChat(
+                    "",
+                    "/w gm " +
+                        '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
+                        '<div style="font-weight: bold; border-bottom: 1px solid black;font-size: 130%;">' +
+                        "TableExport v" +
+                        version +
+                        "</div>" +
+                        '<div style="padding-left:10px;margin-bottom:3px;">' +
+                        "<p>This script dumps commands to the chat for reconstructing a rollable table on another campaign.  While this can be done on your own campaigns via the transmogrifier, this script allows you to pass those commands to a friend and thus share your own creative works with others.<p>" +
+                        "<p><b>Caveat:</b> Avatar images that are not in your own library will be ignored by the API on import, but will not prevent creation of the table and table items.</p>" +
+                        "</div>" +
+                        "<b>Commands</b>" +
+                        '<div style="padding-left:10px;">' +
+                        '<b><span style="font-family: serif;">!export-table --' +
+                        ch("<") +
+                        "Table Name" +
+                        ch(">") +
+                        " [ --" +
+                        ch("<") +
+                        "Table Name" +
+                        ch(">") +
+                        " ...]</span></b>" +
+                        '<div style="padding-left: 10px;padding-right:20px">' +
+                        "<p>For all table names, case is ignored and you may use partial names so long as they are unique.  For example, " +
+                        ch('"') +
+                        "King Maximillian" +
+                        ch('"') +
+                        " could be called " +
+                        ch('"') +
+                        "max" +
+                        ch('"') +
+                        " as long as " +
+                        ch('"') +
+                        "max" +
+                        ch('"') +
+                        " does not appear in any other table names.  Exception:  An exact match will trump a partial match.  In the previous example, if a table named " +
+                        ch('"') +
+                        "Max" +
+                        ch('"') +
+                        " existed, it would be the only table matched for <b>--max</b>.</p>" +
+                        "<ul>" +
+                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
+                        '<b><span style="font-family: serif;">--' +
+                        ch("<") +
+                        "Table Name" +
+                        ch(">") +
+                        "</span></b> " +
+                        ch("-") +
+                        " This is the name of a table to export.  You can specify as many tables as you like in a single command." +
+                        "</li> " +
+                        "</ul>" +
+                        "</div>" +
+                        "</div>" +
+                        '<div style="padding-left:10px;">' +
+                        '<b><span style="font-family: serif;">!import-table --' +
+                        ch("<") +
+                        "Table Name" +
+                        ch(">") +
+                        " --" +
+                        ch("<") +
+                        "[ show | hide ]" +
+                        ch(">") +
+                        "</span></b>" +
+                        '<div style="padding-left: 10px;padding-right:20px">' +
+                        "<p>This is the command output by <b>!export-table</b> to create the new table.  You likely will not need issue these commands directly.</p>" +
+                        "<ul>" +
+                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
+                        '<b><span style="font-family: serif;">--' +
+                        ch("<") +
+                        "Table Name" +
+                        ch(">") +
+                        "</span></b> " +
+                        ch("-") +
+                        " This is the name of the table to be create." +
+                        "</li> " +
+                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
+                        '<b><span style="font-family: serif;">--' +
+                        ch("<") +
+                        "[ show | hide ]" +
+                        ch(">") +
+                        "</span></b> " +
+                        ch("-") +
+                        " This whether to show the table to players or hide it." +
+                        "</li> " +
+                        "</ul>" +
+                        "</div>" +
+                        "</div>" +
+                        '<div style="padding-left:10px;">' +
+                        '<b><span style="font-family: serif;">!import-table-item --' +
+                        ch("<") +
+                        "Table Name" +
+                        ch(">") +
+                        " --" +
+                        ch("<") +
+                        "Table Item Name" +
+                        ch(">") +
+                        " --" +
+                        ch("<") +
+                        "Weight" +
+                        ch(">") +
+                        " --" +
+                        ch("<") +
+                        "Avatar URL" +
+                        ch(">") +
+                        "</span></b>" +
+                        '<div style="padding-left: 10px;padding-right:20px">' +
+                        "<p>This is the command output by <b>!export-table</b> to create the new table.  You likely will not need issue these commands directly.</p>" +
+                        "<ul>" +
+                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
+                        '<b><span style="font-family: serif;">--' +
+                        ch("<") +
+                        "Table Name" +
+                        ch(">") +
+                        "</span></b> " +
+                        ch("-") +
+                        " This is the name of the table to add items to.  <b>Note:</b> unlike for <b>!export-table</b>, this must be an exact name match to the created table." +
+                        "</li> " +
+                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
+                        '<b><span style="font-family: serif;">--' +
+                        ch("<") +
+                        "Table Item Name" +
+                        ch(">") +
+                        "</span></b> " +
+                        ch("-") +
+                        " This is the name of the table item to create.  <b>Note:</b> Because the string " +
+                        ch('"') +
+                        " --" +
+                        ch('"') +
+                        " may occur in a table item name, you may see " +
+                        ch('"') +
+                        "[TABLEEXPORT:ESCAPE]" +
+                        ch('"') +
+                        " show up as a replacement in these commands.  This value is corrected internally to the correct " +
+                        ch('"') +
+                        " --" +
+                        ch('"') +
+                        " sequence on import." +
+                        "</li> " +
+                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
+                        '<b><span style="font-family: serif;">--' +
+                        ch("<") +
+                        "Weight" +
+                        ch(">") +
+                        "</span></b> " +
+                        ch("-") +
+                        " This is the weight for this table item and should be an integer value." +
+                        "</li> " +
+                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
+                        '<b><span style="font-family: serif;">--' +
+                        ch("<") +
+                        "Avatar URL" +
+                        ch(">") +
+                        "</span></b> " +
+                        ch("-") +
+                        " This is the URL for the avatar image of the table item." +
+                        "</li> " +
+                        "</ul>" +
+                        "</div>" +
+                        "</div>" +
+                        "</div>"
+                );
+            },
+            nameEscape = (function () {
+                var re = new RegExp(
+                    "(" + _.map(_.keys(escapes), esRE).join("|") + ")",
+                    "g"
+                );
+                return function (s) {
+                    return s.replace(re, function (c) {
+                        return escapes[c] || c;
+                    });
+                };
+            })(),
+            nameUnescape = (function () {
+                var sepacse = _.invert(escapes),
+                    re = new RegExp(
+                        "(" + _.map(_.keys(sepacse), esRE).join("|") + ")",
+                        "g"
+                    );
+                return function (s) {
+                    return s.replace(re, function (c) {
+                        return sepacse[c] || c;
+                    });
+                };
+            })(),
+            handleInput = function (msg) {
+                var args,
+                    matches,
+                    tables,
+                    tableIDs = [],
+                    errors = [],
+                    items,
+                    itemMatches,
+                    accum = "";
+
+                if (msg.type !== "api" || !playerIsGM(msg.playerid)) {
+                    return;
+                }
+
+                args = msg.content.split(/\s+/);
+                switch (args[0]) {
+                    case "!import-table":
+                        args = msg.content.split(/\s+--/);
+                        if (args.length === 1) {
+                            showHelp();
+                            break;
+                        }
+                        if (_.has(tableCache, args[1])) {
+                            sendChat(
+                                "",
+                                "/w gm " +
+                                    '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
+                                    '<span style="font-weight:bold;color:#990000;">Warning:</span> ' +
+                                    "Table [" +
+                                    args[1] +
+                                    "] already exists, skipping create." +
+                                    "</div>"
+                            );
+                        } else {
+                            tableIDs = findObjs({
+                                type: "rollabletable",
+                                name: args[1],
+                            });
+                            if (tableIDs.length) {
+                                sendChat(
+                                    "",
+                                    "/w gm " +
+                                        '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
+                                        '<span style="font-weight:bold;color:#990000;">Warning:</span> ' +
+                                        "Table [" +
+                                        args[1] +
+                                        "] already exists, skipping create." +
+                                        "</div>"
+                                );
+                            } else {
+                                tableIDs = createObj("rollabletable", {
+                                    name: args[1],
+                                    showplayers: "show" === args[2],
+                                });
+                                tableCache[args[1]] = tableIDs.id;
+                            }
+                        }
+                        break;
+
+                    case "!import-table-item":
+                        args = msg.content.split(/\s+--/);
+                        if (args.length === 1) {
+                            showHelp();
+                            break;
+                        }
+                        args[2] = nameUnescape(args[2]);
+                        if (!_.has(tableCache, args[1])) {
+                            tableIDs = findObjs({
+                                type: "rollabletable",
+                                name: args[1],
+                            });
+                            if (!tableIDs.length) {
+                                sendChat(
+                                    "",
+                                    "/w gm " +
+                                        '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
+                                        '<span style="font-weight:bold;color:#990000;">Error:</span> ' +
+                                        "Table [" +
+                                        args[1] +
+                                        "] doesn not exist.  Cannot create table item." +
+                                        "</div>"
+                                );
+                                break;
+                            } else {
+                                tableCache[args[1]] = tableIDs[0].id;
+                            }
+                        }
+                        createObj("tableitem", {
+                            name: args[2],
+                            rollabletableid: tableCache[args[1]],
+                            weight: parseInt(args[3], 10) || 1,
+                            avatar: args[4] || "",
+                        });
+                        break;
+
+                    case "!export-table":
+                        args = msg.content.split(/\s+--/);
+                        if (args.length === 1) {
+                            showHelp();
+                            break;
+                        }
+                        tables = findObjs({ type: "rollabletable" });
+                        matches = _.chain(args)
+                            .rest()
+                            .map(function (n) {
+                                var l = _.filter(tables, function (t) {
+                                    return (
+                                        t.get("name").toLowerCase() ===
+                                        n.toLowerCase()
+                                    );
+                                });
+                                return 1 === l.length
+                                    ? l
+                                    : _.filter(tables, function (t) {
+                                          return (
+                                              -1 !==
+                                              t
+                                                  .get("name")
+                                                  .toLowerCase()
+                                                  .indexOf(n.toLowerCase())
+                                          );
+                                      });
+                            })
+                            .value();
+
+                        _.each(
+                            matches,
+                            function (o, idx) {
+                                if (1 !== o.length) {
+                                    if (o.length) {
+                                        errors.push(
+                                            "Rollable Table [<b>" +
+                                                args[idx + 1] +
+                                                "</b>] is ambiguous and matches " +
+                                                o.length +
+                                                " names: <b><i> " +
+                                                _.map(o, function (e) {
+                                                    return e.get("name");
+                                                }).join(", ") +
+                                                "</i></b>"
+                                        );
+                                    } else {
+                                        errors.push(
+                                            "Rollable Table [<b>" +
+                                                args[idx + 1] +
+                                                "</b>] does not match any names."
+                                        );
+                                    }
+                                }
+                            },
+                            errors
+                        );
+
+                        if (errors.length) {
+                            sendChat(
+                                "",
+                                "/w gm " +
+                                    '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
+                                    '<div><span style="font-weight:bold;color:#990000;">Error:</span> ' +
+                                    errors.join(
+                                        '</div><div><span style="font-weight:bold;color:#990000;">Error:</span> '
+                                    ) +
+                                    "</div>" +
+                                    "</div>"
+                            );
+                            break;
+                        }
+
+                        if (!errors.length) {
+                            matches = _.chain(matches)
+                                .flatten(true)
+                                .map(function (t) {
+                                    tableIDs.push(t.id);
+                                    return t;
+                                })
+                                .value();
+
+                            items = findObjs({ type: "tableitem" });
+                            itemMatches = _.chain(items)
+                                .filter(function (i) {
+                                    return _.contains(
+                                        tableIDs,
+                                        i.get("rollabletableid")
+                                    );
+                                })
+                                .reduce(function (memo, e) {
+                                    if (
+                                        !_.has(memo, e.get("rollabletableid"))
+                                    ) {
+                                        memo[e.get("rollabletableid")] = [e];
+                                    } else {
+                                        memo[e.get("rollabletableid")].push(e);
+                                    }
+                                    return memo;
+                                }, {})
+                                .value();
+                            _.each(matches, function (t) {
+                                accum +=
+                                    "!import-table --" +
+                                    nameEscape(t.get("name")) +
+                                    " --" +
+                                    (t.get("showplayers") ? "show" : "hide") +
+                                    "<br>";
+                                _.each(itemMatches[t.id], function (i) {
+                                    accum +=
+                                        "!import-table-item --" +
+                                        nameEscape(t.get("name")) +
+                                        " --" +
+                                        nameEscape(i.get("name")) +
+                                        " --" +
+                                        i.get("weight") +
+                                        " --" +
+                                        i.get("avatar") +
+                                        "<br>";
+                                });
+                            });
+                            sendChat("", "/w gm " + accum);
+                        }
+                        break;
+                }
+            },
+            handleRemoveTable = function (obj) {
+                tableCache = _.without(tableCache, obj.id);
+            },
+            registerEventHandlers = function () {
+                on("chat:message", handleInput);
+                on("destroy:rollabletable", handleRemoveTable);
+            };
+
+        return {
+            CheckInstall: checkInstall,
+            RegisterEventHandlers: registerEventHandlers,
+        };
+    })();
+
+on("ready", function () {
+    "use strict";
+
+    TableExport.CheckInstall();
+    TableExport.RegisterEventHandlers();
+});
+
+
+/***/ }),
+
 /***/ 987:
 /***/ (function(module) {
 
@@ -2038,46 +2599,432 @@ var __dirname = "";
 
 /***/ }),
 
-/***/ 889:
-/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+/***/ 209:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
-// ESM COMPAT FLAG
-__nccwpck_require__.r(__webpack_exports__);
 
-// CONCATENATED MODULE: ./src/Roll20Object/shapes.ts
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCustomTableConstructor = void 0;
+const getTopLevelScope_1 = __importDefault(__nccwpck_require__(992));
 /**
- * Returns a hash of Roll20Object _types to functions "filling in" default values for each.
+ * Creates a typed CustomTable constructor.
+ *
+ * NOTE: while you can use this without a supplied sandbox object, it is only guaranteed
+ * to actually work within the actual Roll20 sandbox environment.
  */
-const getShapeDefaults = ({ idGenerator, }) => {
-    return {
-        ability: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _characterid: '', name: '', description: '', action: '', istokenaction: false }, obj), { _type: 'ability' })),
-        attribute: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _characterid: '', name: '', current: '', max: '' }, obj), { _type: 'attribute' })),
-        campaign: (obj = {}) => (Object.assign(Object.assign({ _id: 'root', turnorder: '', initiativepage: false, playerpageid: false, playerspecificpages: false, _journalfolder: '', _jukeboxfolder: '' }, obj), { _type: 'campaign' })),
-        card: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: '', avatar: '', _deckid: '' }, obj), { _type: 'card' })),
-        character: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: '', avatar: '', bio: '', gmnotes: '', archived: false, inplayerjournals: '', controlledby: '', _defaulttoken: '' }, obj), { _type: 'character' })),
-        custfx: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: '', definition: {} }, obj), { _type: 'custfx' })),
-        deck: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: '', _currentDeck: '', _currentIndex: -1, _currentCardShown: true, showplayers: true, playerscandraw: true, avatar: '', shown: false, players_seenumcards: true, players_seefrontofcards: false, gm_seenumcards: true, gm_seefrontofcards: false, infinitecards: false, _cardSequencer: -1, cardsplayed: 'faceup', defaultheight: '', defaultwidth: '', discardpilemode: 'none', _discardPile: '' }, obj), { _type: 'deck' })),
-        graphic: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _subtype: 'token', left: 0, top: 0, width: 0, height: 0, rotation: 0, layer: '', isdrawing: false, flipv: false, fliph: false, name: '', gmnotes: '', controlledby: '', bar1_value: '', bar2_value: '', bar3_value: '', bar1_max: '', bar2_max: '', bar3_max: '', aura1_radius: '', aura2_radius: '', aura1_color: '#FFFF99', aura2_color: '#59E594', aura1_square: false, aura2_square: false, tint_color: 'transparent', statusmarkers: '', token_markers: '', showname: false, showplayers_name: false, showplayers_bar1: false, showplayers_bar2: false, showplayers_bar3: false, showplayers_aura1: false, showplayers_aura2: false, playersedit_name: true, playersedit_bar1: true, playersedit_bar2: true, playersedit_bar3: true, playersedit_aura1: true, playersedit_aura2: true, light_radius: '', light_dimradius: '', light_otherplayers: false, light_hassight: false, light_angle: '360', light_losangle: '360', lastmove: '', light_multiplier: '1', imgsrc: '', _pageid: idGenerator(), adv_fow_view_distance: '' }, obj), { _type: 'graphic' })),
-        hand: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator() }, obj), { _parentid: '', currentView: 'bydeck', currentHand: '', _type: 'hand' })),
-        handout: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), avatar: '', name: 'Mysterious Note', notes: '', gmnotes: '', inplayerjournals: '', archived: false, controlledby: '' }, obj), { _type: 'handout' })),
-        jukeboxtrack: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), playing: false, softstop: false, title: '', volume: 30, loop: false }, obj), { _type: 'jukeboxtrack' })),
-        macro: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _playerid: '', name: '', action: '', visibleto: '', istokenaction: false }, obj), { _type: 'macro' })),
-        page: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _zorder: '', name: '', showgrid: true, showdarkness: false, showlighting: false, width: 25, height: 25, snapping_increment: 1, grid_opacity: 0.5, fog_opacity: 0.35, background_color: '#FFFFFF', gridcolor: '#C0C0C0', grid_type: 'square', scale_number: 5, scale_units: 'ft', gridlabels: false, diagonaltype: 'foure', archived: false, lightupdatedrop: false, lightenforcelos: false, lightrestrictmove: false, lightglobalillum: false }, obj), { _type: 'page' })),
-        path: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _pageid: idGenerator(), _path: '', fill: 'transparent', stroke: '#000000', rotation: 0, layer: '', stroke_width: 5, width: 0, height: 0, top: 0, left: 0, scaleX: 1, scaleY: 1, controlledby: '' }, obj), { _type: 'path' })),
-        player: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _d20userid: idGenerator(), _displayname: '', _online: false, _lastpage: '', _macrobar: '', speakingas: '', color: '#13B9F0', showmacrobar: false }, obj), { _type: 'player' })),
-        rollabletable: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: 'new-table', showplayers: true }, obj), { _type: 'rollabletable' })),
-        text: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _pageid: idGenerator(), top: 0, left: 0, width: 0, height: 0, text: '', font_size: 16, rotation: 0, color: 'rgb(0, 0, 0)', font_family: 'Arial', layer: '', controlledby: '' }, obj), { _type: 'text' })),
-        tableitem: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _rollabletableid: '', name: 'new-table', avatar: '', weight: '1' }, obj), { _type: 'tableitem' })),
+const createCustomTableConstructor = ({ parser, getter, sandbox, logger, }) => {
+    const CustomTable = class CustomTable {
+        /**
+         * @param table - a rollabletable object 'backing' this table.
+         * @param options - options specific to the parser/getters.
+         */
+        constructor(table, options = {}) {
+            this._rollabletableid = table.get("_id");
+            this._logger = logger;
+            this._options = options;
+        }
+        /**
+         * Get all custom table items as understood by the supplied parser.
+         */
+        getAllItems() {
+            const { findObjs } = sandbox || getTopLevelScope_1.default();
+            if (!findObjs) {
+                throw new Error(`No findObjs() function found.`);
+            }
+            const rawTableItems = findObjs({
+                _type: "tableitem",
+                _rollabletableid: this._rollabletableid,
+            });
+            return rawTableItems.map(parser);
+        }
+        /**
+         *
+         * @param key  - a key as interpreted by the supplied getter.
+         */
+        getAtKey(key) {
+            const picked = getter(this.getAllItems(), key);
+            return picked;
+        }
     };
-    // } as {
-    //     [K in Roll20ObjectType]: (obj?: object) => Roll20ObjectShapeTypeMap[K]
-    // }
+    return CustomTable;
+};
+exports.createCustomTableConstructor = createCustomTableConstructor;
+exports.default = exports.createCustomTableConstructor;
+
+
+/***/ }),
+
+/***/ 312:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createRankedTableConstructor = void 0;
+const createCustomTableConstructor_1 = __importDefault(__nccwpck_require__(209));
+/**
+ * Creates a RankedTable constructor.
+ */
+const createRankedTableConstructor = ({ sandbox, logger, } = {}) => {
+    const RankedTable = createCustomTableConstructor_1.default({
+        logger,
+        sandbox,
+        /**
+         * The RankedTable parser splits a TableItem's name by the first
+         * instance of the supplied delimiter, into a number ("minValue")
+         * and a string ("result").
+         * @param obj - a tableitem
+         * @param index - the index at which the tableitem was found within the associated table.
+         * @param options.delimiter - a string, which must be escaped for RegExps.
+         */
+        parser: (obj, index, { delimiter = "=", } = {}) => {
+            const weight = obj.get("weight");
+            const name = obj.get("name");
+            const tmp = new RegExp(`^(.+?)${delimiter}(.+)$`).exec(name);
+            const [minValue, result] = tmp
+                ? [tmp[1], tmp[2]]
+                : [undefined, name];
+            const asNumber = Number(minValue);
+            const parsed = {
+                tableItemId: obj.id,
+                tableIndex: index,
+                rollableTableId: obj.get("_rollabletableid"),
+                minValue: asNumber,
+                result,
+                weight,
+            };
+            logger === null || logger === void 0 ? void 0 : logger.info(`Parsed ${JSON.stringify(obj)}`);
+            logger === null || logger === void 0 ? void 0 : logger.info(`into: ${JSON.stringify(parsed)}`);
+            return parsed;
+        },
+        /**
+         * The RankedTable getter finds the item with the least minValue equal to
+         * or less than the supplied key.
+         * @param items
+         * @param key
+         * @param options
+         */
+        getter: (items, key, options = {}) => {
+            logger === null || logger === void 0 ? void 0 : logger.info(`${items.length} items`);
+            const pickable = items.filter((item) => typeof item.minValue !== "undefined");
+            logger === null || logger === void 0 ? void 0 : logger.info(`${pickable.length} pickable items`);
+            const sorted = pickable.sort((a, b) => a.minValue - b.minValue);
+            logger === null || logger === void 0 ? void 0 : logger.info(sorted);
+            let smallest = items[0];
+            let picked = smallest;
+            // let largest = items[items.length - 1];
+            sorted.forEach((item) => {
+                if (item.minValue <= key) {
+                    picked = item;
+                }
+            });
+            return [picked];
+        },
+    });
+    return RankedTable;
+};
+exports.createRankedTableConstructor = createRankedTableConstructor;
+
+
+/***/ }),
+
+/***/ 544:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RankedTable = exports.createRankedTableConstructor = void 0;
+var createRankedTableConstructor_1 = __nccwpck_require__(312);
+Object.defineProperty(exports, "createRankedTableConstructor", ({ enumerable: true, get: function () { return createRankedTableConstructor_1.createRankedTableConstructor; } }));
+const createRankedTableConstructor_2 = __nccwpck_require__(312);
+exports.RankedTable = createRankedTableConstructor_2.createRankedTableConstructor();
+
+
+/***/ }),
+
+/***/ 401:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const Roll20Sandbox_1 = __nccwpck_require__(392);
+const Logger_1 = __nccwpck_require__(698);
+const CustomTable_1 = __nccwpck_require__(544);
+const getTopLevelScope_1 = __importDefault(__nccwpck_require__(992));
+const logger = Logger_1.getLogger({
+    logLevel: "TRACE",
+});
+const tracer = (name) => {
+    return (fn) => {
+        return (...rest) => {
+            const rString = `${rest}`;
+            const argString = rString.length > 50 ? rString.substr(0, 50) + "..." : rString;
+            logger.trace(`ENTERING ${name}(${argString})`);
+            const r = fn(...rest);
+            logger.trace(`EXITING  ${name}(${argString})`);
+            return r;
+        };
+    };
+};
+// import getTopLevelScope from "../util/getTopLevelScope";
+Roll20Sandbox_1.createRoll20Sandbox({
+    idGenerator: () => Math.random().toString(),
+    logger,
+    wrappers: {
+        on: tracer("on"),
+        sendChat: tracer("sendChat"),
+    },
+}).then((sandbox) => __awaiter(void 0, void 0, void 0, function* () {
+    sandbox._promote();
+    sandbox.log(`Logging from sandbox. Globals: ${Object.keys(sandbox._global)}`);
+    sandbox.log(sandbox._);
+    sandbox.log(sandbox._global._);
+    sandbox.log("AGINA");
+    sandbox.log(getTopLevelScope_1.default()._);
+    console.log("COME ON.");
+    console.log(Object.keys(sandbox._));
+    console.log(Object.keys(global._));
+    // @ts-ignore
+    yield Promise.resolve().then(() => __importStar(__nccwpck_require__(574)));
+    sandbox.on("ready", () => {
+        sandbox.log("READY BABY!");
+        logger.info("ready baby");
+        const { _registerCommand } = sandbox;
+        const RankedTable = CustomTable_1.createRankedTableConstructor({
+            sandbox,
+            logger,
+        });
+        // set up all the dcc spell casting commands.
+        // Add a spell (using Table Export script)
+        const importDCCSpell = _registerCommand(
+        // !import-dcc-spell [data]
+        "import-dcc-spell", (...rest) => {
+            logger.info("Importing DCC spell.");
+            sandbox.sendChat("", rest.join("\n"), undefined, {
+                noarchive: true,
+            });
+        });
+        // Export a spell (using Table Export script)
+        const exportDCCSpell = _registerCommand(
+        // !export-dcc-spell name
+        "export-dcc-spell", (name) => {
+            logger.info(`Exporting DCC spell: "${name}"`);
+            // find all the tables related to the spell.
+            const tables = getDCCSpellTables(name);
+            tables.forEach((table) => {
+                sandbox.sendChat("", `!export-table ${table.get("name")}`);
+            });
+        });
+        // Remove all of a spell's tables
+        const removeDCCSpell = _registerCommand(
+        // !remove-dcc-spell name
+        "remove-dcc-spell", (name) => {
+            logger.info(`Removing DCC spell: "${name}"`);
+            // find all the tables related to the spell.
+            const tables = getDCCSpellTables(name);
+            tables.forEach((table) => {
+                table.remove();
+            });
+        });
+        const castDCCSpell = _registerCommand(
+        // !cast NAME ROLL_OR_RANK
+        "cast", (name, roll) => {
+            logger.info(`Casting a spell! "${name}" "${roll}"`);
+            const rollAsNumber = Number(roll);
+            if (isNaN(rollAsNumber)) {
+                logger.error(`Roll "${roll}" could not be parsed into a number.`);
+                return;
+            }
+            const castTable = new RankedTable(getDCCSpellTable(name));
+            const value = castTable === null || castTable === void 0 ? void 0 : castTable.getAtKey(rollAsNumber);
+            if (value.length !== 1) {
+                logger.error(`Expected a result, but found ${value.length === 0 ? "none" : "more than one."}`);
+                return;
+            }
+            sandbox.sendChat("", `!rt ${value[0].result}`);
+            return;
+        });
+        const getDCCSpellTables = (name) => {
+            const tables = sandbox.filterObjs((obj) => {
+                return (obj._type === "rollabletable" &&
+                    obj
+                        .get("name")
+                        .indexOf(`DCC-SPELL-${name.toUpperCase()}-`) === 0);
+            });
+            logger.info(`Found ${tables.length} tables.`);
+            return tables;
+        };
+        const getDCCSpellTable = (name, subtable = "CAST") => {
+            return sandbox.findObjs({
+                _type: "rollabletable",
+                name: `DCC-SPELL-${name.toUpperCase()}-${subtable.toUpperCase()}`,
+            })[0];
+        };
+        if (sandbox._isWithinSandbox()) {
+            return;
+        }
+        testElfwardLocally(sandbox);
+    });
+}));
+const testElfwardLocally = (sandbox) => {
+    logger.info("Starting local Elfward tests.");
+    sandbox._setAsGM("GM");
+    // try a table import
+    sandbox.sendChat("", "!import-table --TEST-TABLE --show");
 };
 
-// CONCATENATED MODULE: ./src/Roll20Object/Roll20Object.ts
 
-const ImmutableFields = ['_id', '_type'];
+/***/ }),
+
+/***/ 722:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__nccwpck_require__(401);
+
+
+/***/ }),
+
+/***/ 839:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getLogger = void 0;
+const getTopLevelScope_1 = __importDefault(__nccwpck_require__(992));
+const util_1 = __nccwpck_require__(669);
+const types_1 = __nccwpck_require__(321);
+/**
+ * Returns a basic logger.
+ */
+const getLogger = ({ logLevel = "INFO", logName = "LOG", emissionFn, } = {}) => {
+    var _a;
+    let outFn = emissionFn ||
+        getTopLevelScope_1.default().log ||
+        ((_a = getTopLevelScope_1.default().console) === null || _a === void 0 ? void 0 : _a.log) ||
+        (() => { });
+    const logLevelAsNumber = isNaN(Number(logLevel))
+        ? types_1.LOG_LEVEL[logLevel]
+        : Number(logLevel);
+    const level = logLevelAsNumber === undefined ? types_1.LOG_LEVEL.INFO : logLevelAsNumber;
+    const _emit = (msgLevel, ...rest) => {
+        if (level <= types_1.LOG_LEVEL[msgLevel]) {
+            // @ts-ignore
+            return outFn(`${logName} [${msgLevel}]: ${util_1.inspect(rest)}`);
+        }
+    };
+    return {
+        trace: (...rest) => _emit("TRACE", ...rest),
+        debug: (...rest) => _emit("DEBUG", ...rest),
+        info: (...rest) => _emit("INFO", ...rest),
+        warn: (...rest) => _emit("WARN", ...rest),
+        error: (...rest) => _emit("ERROR", ...rest),
+        fatal: (...rest) => _emit("FATAL", ...rest),
+        child: (obj = {}) => {
+            return exports.getLogger({
+                logName: `${logName}::${obj.logName || "(child)"}`,
+                logLevel: obj.logLevel || logLevel,
+                emissionFn: obj.emissionFn || outFn,
+            });
+        },
+    };
+};
+exports.getLogger = getLogger;
+
+
+/***/ }),
+
+/***/ 698:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LOG_LEVEL = exports.getLogger = void 0;
+var getLogger_1 = __nccwpck_require__(839);
+Object.defineProperty(exports, "getLogger", ({ enumerable: true, get: function () { return getLogger_1.getLogger; } }));
+var types_1 = __nccwpck_require__(321);
+Object.defineProperty(exports, "LOG_LEVEL", ({ enumerable: true, get: function () { return types_1.LOG_LEVEL; } }));
+
+
+/***/ }),
+
+/***/ 321:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LOG_LEVEL = void 0;
+exports.LOG_LEVEL = {
+    TRACE: 1,
+    DEBUG: 5,
+    INFO: 10,
+    WARN: 20,
+    ERROR: 40,
+    FATAL: 100,
+};
+
+
+/***/ }),
+
+/***/ 533:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createRoll20ObjectConstructor = void 0;
+const shapes_1 = __nccwpck_require__(163);
+// Fields that can't be changed in the normal ways.
+const ImmutableFields = ["_id", "_type"];
+// Additional rules applied to certain subtypes.
 const Rules = {
     ability: {
         creatable: true,
@@ -2087,11 +3034,11 @@ const Rules = {
         creatable: true,
     },
     character: {
-        asyncFields: ['gmnotes', 'bio'],
+        asyncFields: ["gmnotes", "bio"],
         creatable: true,
     },
     handout: {
-        asyncFields: ['notes', 'gmnotes'],
+        asyncFields: ["notes", "gmnotes"],
         creatable: true,
     },
     macro: {
@@ -2110,9 +3057,12 @@ const Rules = {
         creatable: true,
     },
 };
-const createRoll20ObjectCreator = ({ logger, idGenerator, pool, eventGenerator, }) => {
+/**
+ * Get a Roll20Object constructor.
+ */
+const createRoll20ObjectConstructor = ({ logger, idGenerator, pool, eventGenerator, }) => {
     var _a;
-    const shapeDefaults = getShapeDefaults({ idGenerator });
+    const shapeDefaults = shapes_1.getShapeDefaults({ idGenerator });
     const Roll20Object = (_a = class Roll20Object {
             constructor(type, obj = {}) {
                 logger === null || logger === void 0 ? void 0 : logger.trace(`Creating Roll20Object from: ${type}", ${JSON.stringify(obj)}".`);
@@ -2136,15 +3086,13 @@ const createRoll20ObjectCreator = ({ logger, idGenerator, pool, eventGenerator, 
                 return this._obj._id;
             }
             set(changesOrKey, value) {
-                const allChanges = typeof changesOrKey !== 'object'
-                    ? {
-                        [changesOrKey]: value,
-                    }
+                const allChanges = typeof changesOrKey !== "object"
+                    ? { [changesOrKey]: value }
                     : changesOrKey;
                 logger === null || logger === void 0 ? void 0 : logger.trace(`set(${JSON.stringify(allChanges)})`);
                 Object.keys(allChanges).forEach((key) => {
                     if (ImmutableFields.includes(key)) {
-                        //logger.error(`You may not set key "${key}".`);
+                        logger === null || logger === void 0 ? void 0 : logger.error(`You may not set key "${key}".`);
                     }
                     else {
                         // @ts-ignore
@@ -2161,7 +3109,7 @@ const createRoll20ObjectCreator = ({ logger, idGenerator, pool, eventGenerator, 
              */
             setWithWorker(changes) {
                 logger === null || logger === void 0 ? void 0 : logger.trace(`setWithWorkers(${JSON.stringify(changes)})`);
-                if (this._obj._type !== 'attribute') {
+                if (this._obj._type !== "attribute") {
                     throw new Error(`Can't call setWithWorker on non-attribute objects.`);
                 }
                 Object.keys(changes).forEach((key) => {
@@ -2173,7 +3121,7 @@ const createRoll20ObjectCreator = ({ logger, idGenerator, pool, eventGenerator, 
                         this._obj[key] = changes[key];
                     }
                 });
-                eventGenerator('sheetWorkerCompleted');
+                eventGenerator("sheetWorkerCompleted");
             }
             remove() {
                 logger === null || logger === void 0 ? void 0 : logger.trace(`remove()`);
@@ -2193,57 +3141,131 @@ const createRoll20ObjectCreator = ({ logger, idGenerator, pool, eventGenerator, 
         _a);
     return Roll20Object;
 };
-// type XXX = ReturnType<typeof createRoll20ObjectCreator>;
-// const Foo:Roll20ObjectConstructor<"campaign"> = (createRoll20ObjectCreator({
-//    eventGenerator: (eventName: string) => {},
-//    pool: {},
-//     idGenerator: () => " " as Id
-// }))
-// const foo: Roll20ObjectInterface<"campaign"> = new Foo("campaign")
-// type Roll20ObjectInterfaceTypeMap = {
-//     [K in Roll20ObjectType]:
-// }
-// const bar: Roll20ObjectConstructor = new (createRoll20ObjectCreator(
-//     {
-//         eventGenerator: (eventName: string) => {},
-//         pool: {},
-//         idGenerator: () => ' ' as Id,
-//     }
-// ))('campaign')
-
-// CONCATENATED MODULE: ./src/Roll20Object/index.ts
+exports.createRoll20ObjectConstructor = createRoll20ObjectConstructor;
 
 
+/***/ }),
 
-// EXTERNAL MODULE: ./node_modules/underscore/underscore.js
-var underscore = __nccwpck_require__(987);
-var underscore_default = /*#__PURE__*/__nccwpck_require__.n(underscore);
+/***/ 333:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-// CONCATENATED MODULE: ./src/util/getTopLevelScope.ts
-let _root;
-const getTopLevelScope_getTopLevelScope = () => {
-    // Establish the root object, `window` (`self`) in the browser, `global`
-    // on the server, or `this` in some virtual machines. We use `self`
-    // instead of `window` for `WebWorker` support.
-    if (!_root) {
-        _root =
-            (typeof self == 'object' && self.self === self && self) ||
-                // @ts-ignore
-                (typeof global == 'object' && global.global === global && global) ||
-                Function('return this')() ||
-                {};
-    }
-    return _root;
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createRoll20ObjectCreator = exports.getShapeDefaults = void 0;
+var shapes_1 = __nccwpck_require__(163);
+Object.defineProperty(exports, "getShapeDefaults", ({ enumerable: true, get: function () { return shapes_1.getShapeDefaults; } }));
+var Roll20Object_1 = __nccwpck_require__(533);
+Object.defineProperty(exports, "createRoll20ObjectCreator", ({ enumerable: true, get: function () { return Roll20Object_1.createRoll20ObjectConstructor; } }));
+
+
+/***/ }),
+
+/***/ 163:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getShapeDefaults = void 0;
+/**
+ * Returns a hash of Roll20Object _types to functions "filling in" default values for each.
+ */
+const getShapeDefaults = ({ idGenerator, }) => {
+    return {
+        ability: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _characterid: "", name: "", description: "", action: "", istokenaction: false }, obj), { _type: "ability" })),
+        attribute: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _characterid: "", name: "", current: "", max: "" }, obj), { _type: "attribute" })),
+        campaign: (obj = {}) => (Object.assign(Object.assign({ _id: "root", turnorder: "", initiativepage: false, playerpageid: false, playerspecificpages: false, _journalfolder: "", _jukeboxfolder: "" }, obj), { _type: "campaign" })),
+        card: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", avatar: "", _deckid: "" }, obj), { _type: "card" })),
+        character: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", avatar: "", bio: "", gmnotes: "", archived: false, inplayerjournals: "", controlledby: "", _defaulttoken: "" }, obj), { _type: "character" })),
+        custfx: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", definition: {} }, obj), { _type: "custfx" })),
+        deck: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", _currentDeck: "", _currentIndex: -1, _currentCardShown: true, showplayers: true, playerscandraw: true, avatar: "", shown: false, players_seenumcards: true, players_seefrontofcards: false, gm_seenumcards: true, gm_seefrontofcards: false, infinitecards: false, _cardSequencer: -1, cardsplayed: "faceup", defaultheight: "", defaultwidth: "", discardpilemode: "none", _discardPile: "" }, obj), { _type: "deck" })),
+        graphic: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _subtype: "token", left: 0, top: 0, width: 0, height: 0, rotation: 0, layer: "", isdrawing: false, flipv: false, fliph: false, name: "", gmnotes: "", controlledby: "", bar1_value: "", bar2_value: "", bar3_value: "", bar1_max: "", bar2_max: "", bar3_max: "", aura1_radius: "", aura2_radius: "", aura1_color: "#FFFF99", aura2_color: "#59E594", aura1_square: false, aura2_square: false, tint_color: "transparent", statusmarkers: "", token_markers: "", showname: false, showplayers_name: false, showplayers_bar1: false, showplayers_bar2: false, showplayers_bar3: false, showplayers_aura1: false, showplayers_aura2: false, playersedit_name: true, playersedit_bar1: true, playersedit_bar2: true, playersedit_bar3: true, playersedit_aura1: true, playersedit_aura2: true, light_radius: "", light_dimradius: "", light_otherplayers: false, light_hassight: false, light_angle: "360", light_losangle: "360", lastmove: "", light_multiplier: "1", imgsrc: "", _pageid: idGenerator(), adv_fow_view_distance: "" }, obj), { _type: "graphic" })),
+        hand: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator() }, obj), { _parentid: "", currentView: "bydeck", currentHand: "", _type: "hand" })),
+        handout: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), avatar: "", name: "Mysterious Note", notes: "", gmnotes: "", inplayerjournals: "", archived: false, controlledby: "" }, obj), { _type: "handout" })),
+        jukeboxtrack: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), playing: false, softstop: false, title: "", volume: 30, loop: false }, obj), { _type: "jukeboxtrack" })),
+        macro: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _playerid: "", name: "", action: "", visibleto: "", istokenaction: false }, obj), { _type: "macro" })),
+        page: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _zorder: "", name: "", showgrid: true, showdarkness: false, showlighting: false, width: 25, height: 25, snapping_increment: 1, grid_opacity: 0.5, fog_opacity: 0.35, background_color: "#FFFFFF", gridcolor: "#C0C0C0", grid_type: "square", scale_number: 5, scale_units: "ft", gridlabels: false, diagonaltype: "foure", archived: false, lightupdatedrop: false, lightenforcelos: false, lightrestrictmove: false, lightglobalillum: false }, obj), { _type: "page" })),
+        path: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _pageid: idGenerator(), _path: "", fill: "transparent", stroke: "#000000", rotation: 0, layer: "", stroke_width: 5, width: 0, height: 0, top: 0, left: 0, scaleX: 1, scaleY: 1, controlledby: "" }, obj), { _type: "path" })),
+        player: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _d20userid: idGenerator(), _displayname: "", _online: false, _lastpage: "", _macrobar: "", speakingas: "", color: "#13B9F0", showmacrobar: false }, obj), { _type: "player" })),
+        rollabletable: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "new-table", showplayers: true }, obj), { _type: "rollabletable" })),
+        text: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _pageid: idGenerator(), top: 0, left: 0, width: 0, height: 0, text: "", font_size: 16, rotation: 0, color: "rgb(0, 0, 0)", font_family: "Arial", layer: "", controlledby: "" }, obj), { _type: "text" })),
+        tableitem: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _rollabletableid: "", name: "new-table", avatar: "", weight: "1" }, obj), { _type: "tableitem" })),
+    };
 };
-/* harmony default export */ const util_getTopLevelScope = (getTopLevelScope_getTopLevelScope);
-
-// CONCATENATED MODULE: ./src/Roll20Sandbox/api.ts
+exports.getShapeDefaults = getShapeDefaults;
 
 
+/***/ }),
 
+/***/ 392:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createRoll20Sandbox = void 0;
+var sandbox_1 = __nccwpck_require__(746);
+Object.defineProperty(exports, "createRoll20Sandbox", ({ enumerable: true, get: function () { return sandbox_1.createRoll20Sandbox; } }));
+
+
+/***/ }),
+
+/***/ 746:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createRoll20Sandbox = void 0;
+__nccwpck_require__(79);
+const Roll20Object_1 = __nccwpck_require__(333);
+const getTopLevelScope_1 = __importDefault(__nccwpck_require__(992));
 const createRoll20Sandbox = ({ campaign, state, logger, pool = {}, idGenerator, 
 // @ts-ignore
-scope = util_getTopLevelScope(), wrappers = {}, }) => {
+scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, void 0, void 0, function* () {
     // private variables for things handled behind the scenes
     // by the sandbox.
     const _private = {
@@ -2256,7 +3278,7 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
     };
     const _fireEvent = (eventName, ...rest) => {
         logger === null || logger === void 0 ? void 0 : logger.trace(`_fireEvent('${eventName}').`, ...rest);
-        if (eventName === 'sheetWorkerCompleted') {
+        if (eventName === "sheetWorkerCompleted") {
             // Unlike other events, this one clears out each queued
             // handler as it is called.
             const handlers = _private._handlers[eventName] || [];
@@ -2264,7 +3286,7 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
             _private._handlers[eventName] = [];
             return;
         }
-        if (eventName === 'ready') {
+        if (eventName === "ready") {
             // Unlike other events, we only fire this once.
             if (!_private._readyEventEmitted) {
                 const handlers = _private._handlers[eventName] || [];
@@ -2273,29 +3295,44 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
             }
             return;
         }
-        const subEvents = eventName.split(':');
+        const subEvents = eventName.split(":");
         while (subEvents.length) {
-            const n = subEvents.join(':');
+            const n = subEvents.join(":");
             logger === null || logger === void 0 ? void 0 : logger.info(`_fireEvent: Firing event '${n}'.`, ...rest);
             const handlers = _private._handlers[n] || [];
             handlers.forEach((handler) => handler(...rest));
             subEvents.pop();
         }
     };
-    const Roll20Object = createRoll20ObjectCreator({
+    const Roll20Object = Roll20Object_1.createRoll20ObjectCreator({
         logger,
         idGenerator,
         pool,
         eventGenerator: _fireEvent,
     });
+    // type Unwrap<T> = T extends Promise<infer U>
+    //     ? U
+    //     : T extends (...args: any) => Promise<infer U>
+    //     ? U
+    //     : T extends (...args: any) => infer U
+    //     ? U
+    //     : T;
+    // type X = Unwrap<Promise<"foo">>;
+    // type Z = typeof import("underscore");
+    // type ZZ = Unwrap<Z>;
+    const filterObjs = (cb) => {
+        logger === null || logger === void 0 ? void 0 : logger.trace(`filterObjs()`);
+        return Object.keys(_private._pool)
+            .map((key) => _private._pool[key])
+            .filter(cb);
+    };
     const sandbox = {
-        // @ts-ignore
-        _: (underscore_default()),
+        _: undefined,
         state: state || {},
         Campaign: () => {
             if (!_private._campaign) {
                 const cmp = campaign ||
-                    new Roll20Object('campaign');
+                    new Roll20Object("campaign");
                 _private._campaign = cmp;
                 _private._pool[cmp.id] = cmp;
             }
@@ -2309,24 +3346,17 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
             _private._pool[r.id] = r;
             return r;
         },
-        filterObjs: (cb) => {
-            logger === null || logger === void 0 ? void 0 : logger.trace(`filterObjs()`);
-            return Object.keys(_private._pool)
-                .map((key) => _private._pool[key])
-                .filter(cb);
-        },
+        filterObjs,
         findObjs: (obj, { caseInsensitive = false } = {}) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`findObjs(${JSON.stringify(obj)}, { caseInsensitive: ${caseInsensitive} })`);
-            // @ts-ignore
-            const filterObjs = filterObjs || sandbox.filterObjs;
             return filterObjs((testObj) => {
                 let found = true;
                 Object.keys(testObj).forEach((key) => {
                     const testValue = testObj[key];
                     const objValue = obj[key];
                     if (found && caseInsensitive) {
-                        if (typeof objValue === 'string' ||
-                            typeof testValue === 'string') {
+                        if (typeof objValue === "string" ||
+                            typeof testValue === "string") {
                             if (testValue.toString().toLowerCase() !=
                                 objValue.toString().toLowerCase()) {
                                 found = false;
@@ -2344,11 +3374,11 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`getAllObjs()`);
             return Object.keys(_private._pool).map((key) => _private._pool[key]);
         },
-        getAttrByName: (id, name, curOrMax = 'current') => {
+        getAttrByName: (id, name, curOrMax = "current") => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`getAttrByName(${id}, ${name}, ${curOrMax})`);
             // @ts-ignore
             const findObjs = findObjs || sandbox.findObjs;
-            const char = findObjs({ type: 'character', id })[0];
+            const char = findObjs({ type: "character", id })[0];
             if (!char) {
                 throw new Error(`Can't find character with id "${id}".`);
             }
@@ -2357,11 +3387,11 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
         log: (...rest) => { var _a; return (_a = (logger ? logger : console ? console : null)) === null || _a === void 0 ? void 0 : _a.info(...rest); },
         on: (eventName, handler) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`on(${eventName})`);
-            const subEvents = eventName.split(':');
-            if (subEvents[0] === 'ready') {
+            const subEvents = eventName.split(":");
+            if (subEvents[0] === "ready") {
                 // If we've emitted a "ready" event already, immediately
                 // call additional on("ready") handlers.
-                logger === null || logger === void 0 ? void 0 : logger.info('Ready event', _private._readyEventEmitted);
+                logger === null || logger === void 0 ? void 0 : logger.info("Ready event", _private._readyEventEmitted);
                 if (_private._readyEventEmitted) {
                     logger === null || logger === void 0 ? void 0 : logger.info(`on(${eventName}) handler set after initial "ready" event. Immediately calling it.`);
                     handler();
@@ -2369,18 +3399,18 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
                 }
                 // handler()
             }
-            else if (subEvents[0] === 'change') {
+            else if (subEvents[0] === "change") {
                 // handler(obj, prev)
                 // prev is a regular obj, not a Roll20Object.
                 // async fields will have ids, not data, in prev
             }
-            else if (subEvents[0] === 'add') {
+            else if (subEvents[0] === "add") {
                 // handler(obj)
             }
-            else if (subEvents[0] === 'destroy') {
+            else if (subEvents[0] === "destroy") {
                 // handler(obj)
             }
-            else if (subEvents[0] === 'chat') {
+            else if (subEvents[0] === "chat") {
                 // handler(msg)
             }
             _private._handlers[eventName] = _private._handlers[eventName] || [];
@@ -2389,9 +3419,9 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
         },
         onSheetWorkerCompleted: (cb) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`onSheetWorkerCompleted()`);
-            _private._handlers['sheetWorkerCompleted'] =
-                _private._handlers['sheetWorkerCompleted'] || [];
-            _private._handlers['sheetWorkerCompleted'].push(cb);
+            _private._handlers["sheetWorkerCompleted"] =
+                _private._handlers["sheetWorkerCompleted"] || [];
+            _private._handlers["sheetWorkerCompleted"].push(cb);
         },
         playerIsGM: (playerId) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`playerIsGM(${playerId})`);
@@ -2407,12 +3437,19 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
         sendChat: (speakingAs, message, cb, { noarchive = false, use3d = false } = {}) => {
             logger === null || logger === void 0 ? void 0 : logger.info(`sendChat(${speakingAs}, ${message})`);
             cb && cb([]);
-            if (_private._withinSandbox) {
-                // TODO: find additional message info
-                _fireEvent('chat:message', {
+            // TODO: player management
+            if (!_private._withinSandbox) {
+                const type = message.indexOf("!") === 0 ? "api" : "general";
+                const msg = {
                     who: speakingAs,
                     content: message,
-                });
+                    playerid: "GM",
+                    type,
+                    target_name: "",
+                    selected: [],
+                };
+                // TODO: find additional message info
+                _fireEvent("chat:message", msg);
             }
         },
         sendPing: (left, top, pageId, playerId, moveAll = false, visibleTo) => {
@@ -2451,115 +3488,138 @@ scope = util_getTopLevelScope(), wrappers = {}, }) => {
     // also exist in the global scope, we'll use those instead.
     // If wrappers were passed in, we wrap whichever function we've found to use with them.
     const realSandbox = {};
-    Object.keys(sandbox).forEach((k) => {
+    yield Promise.all(Object.keys(sandbox).map((k) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const topLevelScope = scope;
         const key = k;
-        if (typeof topLevelScope[key] !== 'undefined') {
-            logger === null || logger === void 0 ? void 0 : logger.info(`Found Roll20's "${key}". Copying to Roll20Api.`);
+        if (typeof topLevelScope[key] !== "undefined") {
+            logger === null || logger === void 0 ? void 0 : logger.info(`Found Roll20's "${key}". Copying to Roll20Sandbox.`);
             realSandbox[key] = topLevelScope[key];
         }
         else {
             logger === null || logger === void 0 ? void 0 : logger.info(`Roll20 "${key}" not found. Installing mock.`);
             _private._withinSandbox = false;
-            if (typeof sandbox[key] === 'undefined') {
-                logger === null || logger === void 0 ? void 0 : logger.info(`No mock found for "${key}"`);
+            // The underscore library is an outlier here. We only want to include the library
+            // if necessary, and other libraries expect it available globally from the jump.
+            if (key === "_") {
+                logger === null || logger === void 0 ? void 0 : logger.info("Dynamically importing underscore library.");
+                const _b = yield Promise.resolve().then(() => __importStar(__nccwpck_require__(987))), { default: myDefault } = _b, rest = __rest(_b, ["default"]);
+                const _ = Object.assign(myDefault, rest);
+                logger === null || logger === void 0 ? void 0 : logger.info("Imported as", _);
+                topLevelScope._ = _;
+                realSandbox._ = _;
             }
-            // @ts-ignore
-            realSandbox[key] = sandbox[key];
-            logger === null || logger === void 0 ? void 0 : logger.info(`Using mocked "${key}": ${(_a = sandbox[key]) === null || _a === void 0 ? void 0 : _a.toString()}.`);
+            else {
+                if (typeof sandbox[key] === "undefined") {
+                    logger === null || logger === void 0 ? void 0 : logger.info(`No mock found for "${key}"`);
+                }
+                // @ts-ignore
+                realSandbox[key] = sandbox[key];
+                logger === null || logger === void 0 ? void 0 : logger.info(`Using mocked "${key}": ${(_a = sandbox[key]) === null || _a === void 0 ? void 0 : _a.toString()}.`);
+            }
         }
         if (wrappers[key]) {
             logger === null || logger === void 0 ? void 0 : logger.info(`Custom wrapper found for "${key}". Applying.`);
             realSandbox[key] = wrappers[key](realSandbox[key]);
         }
-    });
-    return Object.assign(Object.assign({}, realSandbox), { _fireEvent });
-};
-const promoteSandbox = (sandbox, keys, 
-// @ts-ignore
-scope = getTopLevelScope()) => {
-    let promotionKeys = keys || Object.keys(sandbox);
-    promotionKeys.forEach((key) => {
-        const k = key;
-        scope[k] = sandbox[k];
-    });
-    return scope;
-};
-
-// CONCATENATED MODULE: ./src/Roll20Sandbox/index.ts
-
-
-// CONCATENATED MODULE: ./src/Logger/LOG_LEVEL.ts
-const LOG_LEVEL = {
-    TRACE: 1,
-    DEBUG: 5,
-    INFO: 10,
-    WARN: 20,
-    ERROR: 40,
-    FATAL: 100,
-};
-
-// CONCATENATED MODULE: ./src/Logger/getLogger.ts
-
-const getLogger = (config = {}) => {
-    const { logLevel = 'INFO', logName = 'LOG', 
-    // @ts-ignore
-    emissionFn = log || (console === null || console === void 0 ? void 0 : console.log) || (() => { }), } = config;
-    const logLevelAsNumber = isNaN(Number(logLevel))
-        ? LOG_LEVEL[logLevel]
-        : Number(logLevel);
-    const level = logLevelAsNumber === undefined ? LOG_LEVEL.INFO : logLevelAsNumber;
-    const _emit = (msgLevel, ...rest) => {
-        if (level <= LOG_LEVEL[msgLevel]) {
+    })));
+    const _registerCommand = (name, handler) => {
+        logger === null || logger === void 0 ? void 0 : logger.info("registering command " + name);
+        sandbox.on("chat:message", (msg) => {
+            if (msg.type !== "api") {
+                return;
+            }
+            logger === null || logger === void 0 ? void 0 : logger.info(msg.content);
+            if (msg.content.indexOf(name) !== 1) {
+                return;
+            }
+            logger === null || logger === void 0 ? void 0 : logger.info("invoked" + name);
             // @ts-ignore
-            return emissionFn(`${logName} [${msgLevel}]: ${JSON.stringify(rest)}`);
+            const [command, ...args] = msg.content.splitArgs();
+            logger === null || logger === void 0 ? void 0 : logger.info("split up command" + args.length);
+            handler(...args);
+        });
+    };
+    const _isWithinSandbox = () => {
+        return _private._withinSandbox;
+    };
+    /**
+     * If, after a full second, we're not within the real Roll20 sandbox, fire a ready event.
+     */
+    // @ts-ignore
+    setTimeout(() => {
+        if (_isWithinSandbox()) {
+            logger === null || logger === void 0 ? void 0 : logger.info(`Within real sandbox, so ignoring need to fire ready event.`);
+            if (_private._readyEventEmitted) {
+                logger === null || logger === void 0 ? void 0 : logger.info(`Ready event was already heard, anyway.`);
+            }
+            return;
         }
+        if (_private._readyEventEmitted) {
+            logger === null || logger === void 0 ? void 0 : logger.info(`Outside of real sandbox, but ready event already fired. Huh. Not firing again.`);
+            return;
+        }
+        logger === null || logger === void 0 ? void 0 : logger.info(`Outside of real sandbox and ready event not fired within 1 second, so firing ready event manually.`);
+        _fireEvent("ready");
+    }, 1000);
+    const _promote = (keys, 
+    // @ts-ignore
+    scope = getTopLevelScope_1.default()) => {
+        logger === null || logger === void 0 ? void 0 : logger.info("_PROMOTE");
+        let promotionKeys = keys || Object.keys(realSandbox);
+        logger === null || logger === void 0 ? void 0 : logger.info(`_PROMOTING: ${promotionKeys}`);
+        promotionKeys.forEach((key) => {
+            logger === null || logger === void 0 ? void 0 : logger.info(`${key}, ${realSandbox[key]}`);
+            scope[key] = realSandbox[key];
+        });
+        return scope;
     };
-    return {
-        trace: (...rest) => _emit('TRACE', ...rest),
-        debug: (...rest) => _emit('DEBUG', ...rest),
-        info: (...rest) => _emit('INFO', ...rest),
-        warn: (...rest) => _emit('WARN', ...rest),
-        error: (...rest) => _emit('ERROR', ...rest),
-        fatal: (...rest) => _emit('FATAL', ...rest),
-        child: (obj = {}) => {
-            return getLogger({
-                logName: `${logName}::${obj.logName || '(child)'}`,
-                logLevel: obj.logLevel || logLevel,
-                emissionFn: obj.emissionFn || emissionFn,
-            });
-        },
+    const _setAsGM = (playerId) => {
+        _private._GM = playerId;
     };
+    return Object.assign(Object.assign({}, realSandbox), { _fireEvent,
+        _registerCommand,
+        _isWithinSandbox, _global: getTopLevelScope_1.default(), _promote,
+        _setAsGM });
+});
+exports.createRoll20Sandbox = createRoll20Sandbox;
+
+
+/***/ }),
+
+/***/ 992:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getTopLevelScope = void 0;
+let _root;
+const getTopLevelScope = () => {
+    // Establish the root object, `window` (`self`) in the browser, `global`
+    // on the server, or `this` in some virtual machines. We use `self`
+    // instead of `window` for `WebWorker` support.
+    if (!_root) {
+        _root =
+            (typeof self == 'object' && self.self === self && self) ||
+                // @ts-ignore
+                (typeof global == 'object' && global.global === global && global) ||
+                Function('return this')() ||
+                {};
+    }
+    return _root;
 };
-
-// CONCATENATED MODULE: ./src/Logger/index.ts
-
-
-
-//export { getMockLogger } from './getMockLogger'
-
-// CONCATENATED MODULE: ./src/Elfward/index.ts
+exports.getTopLevelScope = getTopLevelScope;
+exports.default = exports.getTopLevelScope;
 
 
-const sandbox = createRoll20Sandbox({
-    idGenerator: () => Math.random().toString(),
-    logger: getLogger({
-        logLevel: 'INFO',
-        // @ts-ignore
-        emissionFn: log || (console === null || console === void 0 ? void 0 : console.log),
-    }),
-});
-// note: the build needs __dirname, window, and global all defined.
-// it needs module.exports removed from the top after build as well
-sandbox.on('ready', () => {
-    sandbox.log('READY BABY!');
-});
-// //var global = global
-// var window = window
-// var __dirname = ''
-//module.exports =
+/***/ }),
 
+/***/ 669:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("util");;
 
 /***/ })
 
@@ -2595,52 +3655,12 @@ sandbox.on('ready', () => {
 /******/ 	}
 /******/ 	
 /************************************************************************/
-/******/ 	/* webpack/runtime/compat get default export */
-/******/ 	(() => {
-/******/ 		// getDefaultExport function for compatibility with non-harmony modules
-/******/ 		__nccwpck_require__.n = (module) => {
-/******/ 			var getter = module && module.__esModule ?
-/******/ 				() => module['default'] :
-/******/ 				() => module;
-/******/ 			__nccwpck_require__.d(getter, { a: getter });
-/******/ 			return getter;
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter functions for harmony exports
-/******/ 		__nccwpck_require__.d = (exports, definition) => {
-/******/ 			for(var key in definition) {
-/******/ 				if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
-/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 				}
-/******/ 			}
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__nccwpck_require__.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/make namespace object */
-/******/ 	(() => {
-/******/ 		// define __esModule on exports
-/******/ 		__nccwpck_require__.r = (exports) => {
-/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 			}
-/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
-/******/ 	})();
-/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	__nccwpck_require__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nccwpck_require__(889);
+/******/ 	return __nccwpck_require__(722);
 /******/ })()
 ;
