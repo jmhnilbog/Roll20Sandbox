@@ -1,4 +1,4 @@
-let _root: any
+let _root: any;
 
 export const getTopLevelScope = () => {
     // Establish the root object, `window` (`self`) in the browser, `global`
@@ -7,13 +7,13 @@ export const getTopLevelScope = () => {
 
     if (!_root) {
         _root =
-            (typeof self == 'object' && self.self === self && self) ||
+            (typeof self == "object" && self.self === self && self) ||
             // @ts-ignore
-            (typeof global == 'object' && global.global === global && global) ||
-            Function('return this')() ||
-            {}
+            (typeof global == "object" && global.global === global && global) ||
+            Function("return this")() ||
+            {};
     }
-    return _root
-}
+    return _root;
+};
 
-export default getTopLevelScope
+export default getTopLevelScope;

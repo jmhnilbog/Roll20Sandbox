@@ -46,6 +46,11 @@ type Mutable<T, K extends keyof T = keyof T> = Omit<T, K> &
         -readonly [key in K]: T[key];
     };
 
+type Immutable<T, K extends keyof T = keyof T> = Omit<T, K> &
+    {
+        readonly [key in K]: T[key];
+    };
+
 /**
  * Makes named keys required.
  */

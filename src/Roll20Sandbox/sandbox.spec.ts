@@ -7,34 +7,28 @@ import { getLogger } from "../Logger";
 
 const idGenerator = () => Math.random().toString() as Id;
 
+var testNumber = 0;
 const logger = getLogger();
-const pool = {} as Record<string, any>;
+
 const events = {} as Record<string, any>;
 
 describe("createRoll20Sandbox", async () => {
-    it("should return an api object", async () => {
+    it(`[${++testNumber}] should return an api object`, async () => {
         const sandbox = await createRoll20Sandbox({
-            logger,
-            pool,
+            logger: logger.child({
+                logName: testNumber.toString(),
+            }),
             idGenerator,
         });
 
         expect(!!sandbox).to.equal(true);
 
-        const myCustFX = sandbox.createObj("custfx", { definition: "foo" });
-        console.log(myCustFX.get("definition"));
-        expect(myCustFX.get("definition") === "foo").to.equal(true);
-        expect(pool[myCustFX.id]).to.equal(myCustFX);
-        console.log("POOL");
-        console.log(pool);
-        myCustFX.remove();
-        expect(pool[myCustFX.id as string]).to.be.undefined;
+        sandbox._dispose();
     });
 
-    it("should support wrapping", async () => {
+    it(`[${++testNumber}] should support wrapping`, async () => {
         const sandbox = await createRoll20Sandbox({
             logger,
-            pool,
             idGenerator,
             wrappers: {
                 createObj: (createFn: Function) => {
@@ -68,12 +62,10 @@ describe("createRoll20Sandbox", async () => {
         expect(!!sandbox).to.equal(true);
 
         const myCustFX = sandbox.createObj("custfx", { definition: "foo" });
-        console.log(myCustFX.get("definition"));
+
         expect(myCustFX.get("definition") === "foo").to.equal(true);
-        expect(pool[myCustFX.id]).to.equal(myCustFX);
-        console.log("POOL");
-        console.log(pool);
         myCustFX.remove();
-        expect(pool[myCustFX.id as string]).to.be.undefined;
+
+        sandbox._dispose();
     });
 });

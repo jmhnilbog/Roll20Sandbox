@@ -1,6 +1,6 @@
 {
     "exclude": ["./build/**/*"],
-    "include": ["./lib/**/*", "./src/**/*", "./*.d.ts"],
+    "include": ["./lib/**/*", "./src/**/*", "./**/*.d.ts"],
     "compilerOptions": {
         "target": "es2016",
         "moduleResolution": "node",

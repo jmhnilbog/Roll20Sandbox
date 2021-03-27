@@ -10,6 +10,7 @@ import {
 
 import { Logger } from "../Logger";
 import { Roll20EventName } from "../Roll20Sandbox";
+import { Roll20AddEvent } from "../Roll20Sandbox/types";
 
 // Fields that can't be changed in the normal ways.
 const ImmutableFields = ["_id", "_type"];
@@ -66,7 +67,7 @@ export const createRoll20ObjectConstructor = ({
     logger?: Logger;
     idGenerator: IdGenerator;
     pool?: Record<string, any>;
-    eventGenerator: EventGenerator;
+    eventGenerator?: EventGenerator;
 }) => {
     const shapeDefaults = getShapeDefaults({ idGenerator });
 
@@ -86,13 +87,33 @@ export const createRoll20ObjectConstructor = ({
 
         _obj: Roll20ObjectShapeTypeMap[T];
         constructor(type: T, obj: Partial<Roll20ObjectShapeTypeMap[T]> = {}) {
-            logger?.trace(
-                `Creating Roll20Object from: ${type}", ${JSON.stringify(obj)}".`
-            );
+            logger?.trace(`constructor(${type}, ${JSON.stringify(obj)}).`);
             this._obj = Roll20Object._createShape<T>(
                 type,
                 obj
             ) as Roll20ObjectShapeTypeMap[T];
+            if (pool) {
+                const id = this._obj._id as string;
+                if (pool[id]) {
+                    throw new Error(
+                        `Object with _id ${id} already present in pool!`
+                    );
+                } else {
+                    pool[id] = this;
+                    logger?.debug(
+                        `New Roll20Object placed into pool. Total in pool: ${
+                            Object.keys(pool).length
+                        }`
+                    );
+                }
+            }
+            const addEventName: Roll20AddEvent = `add:${type}` as Roll20AddEvent;
+            eventGenerator?.(addEventName, this);
+            logger?.trace(
+                `constructor(${type}, ${JSON.stringify(obj)}): ${JSON.stringify(
+                    this
+                )}`
+            );
         }
 
         get<K extends keyof Roll20ObjectShapeTypeMap[T]>(
@@ -105,12 +126,12 @@ export const createRoll20ObjectConstructor = ({
                     throw new Error(`Callback required to get key "#{key}".`);
                 }
             }
-            const value: Roll20ObjectShapeTypeMap[T][K] = this._obj[key];
+            const value: Roll20ObjectShapeTypeMap[T][K] = cb
+                ? cb(this._obj[key])
+                : this._obj[key];
 
-            logger?.trace(`get(${key}) found "${value}".`);
+            logger?.trace(`get(${key}) :${JSON.stringify(value)}`);
 
-            // TODO: allow a delay before callback is called.
-            //return (cb ? cb(value) : value) as S[K]
             return value;
         }
 
@@ -150,7 +171,7 @@ export const createRoll20ObjectConstructor = ({
                     this._obj[key] =
                         allChanges[key as keyof Roll20ObjectShapeTypeMap[T]];
 
-                    eventGenerator(
+                    eventGenerator?.(
                         `change:${this._obj._type}:${key}` as Roll20EventName
                     );
                 }
@@ -179,7 +200,7 @@ export const createRoll20ObjectConstructor = ({
                 }
             });
 
-            eventGenerator("sheetWorkerCompleted");
+            eventGenerator?.("sheetWorkerCompleted");
         }
         remove() {
             logger?.trace(`remove()`);
@@ -191,9 +212,15 @@ export const createRoll20ObjectConstructor = ({
                     );
                 }
                 delete pool[this.id];
+                logger?.debug(
+                    `Roll20Object removed from pool. Total in pool: ${
+                        Object.keys(pool).length
+                    }`
+                );
             }
 
-            eventGenerator(`remove:${this._obj._type}` as Roll20EventName);
+            eventGenerator?.(`remove:${this._obj._type}` as Roll20EventName);
+            logger?.trace(`remove(): ${JSON.stringify(this)}`);
             return this;
         }
     };

@@ -29,8 +29,6 @@ export const createCustomTableConstructor = <T, K>({
 }) => {
     const CustomTable = class CustomTable implements CustomTableInterface<T> {
         private _rollabletableid: Id;
-        private _logger?: Logger;
-        private _options: any;
 
         /**
          * @param table - a rollabletable object 'backing' this table.
@@ -40,14 +38,14 @@ export const createCustomTableConstructor = <T, K>({
             table: Roll20ObjectInterface<"rollabletable">,
             options: any = {}
         ) {
-            this._rollabletableid = table.get("_id") as Id;
-            this._logger = logger;
-            this._options = options;
+            logger?.trace(`constructor(${table.id}, ${options})`);
+            this._rollabletableid = table.id as Id;
         }
         /**
          * Get all custom table items as understood by the supplied parser.
          */
         getAllItems() {
+            logger?.trace(`getAllItems()`);
             const { findObjs } = sandbox || getTopLevelScope();
             if (!findObjs) {
                 throw new Error(`No findObjs() function found.`);
@@ -65,7 +63,9 @@ export const createCustomTableConstructor = <T, K>({
          * @param key  - a key as interpreted by the supplied getter.
          */
         getAtKey(key: K): T[] {
+            logger?.trace(`getAtKey(${key})`);
             const picked = getter(this.getAllItems(), key);
+            logger?.trace(`getAtKey(${key}): ${picked}`);
             return picked;
         }
     };

@@ -38,6 +38,11 @@ export const createRankedTableConstructor = ({
                 delimiter?: string;
             } = {}
         ) => {
+            logger?.trace(
+                `parser(${JSON.stringify(
+                    obj
+                )}, ${index}, { delimiter: ${delimiter} })`
+            );
             const weight = obj.get("weight");
             const name = obj.get("name");
             const tmp = new RegExp(`^(.+?)${delimiter}(.+)$`).exec(name);
@@ -54,8 +59,13 @@ export const createRankedTableConstructor = ({
                 weight,
             } as const;
 
-            logger?.info(`Parsed ${JSON.stringify(obj)}`);
-            logger?.info(`into: ${JSON.stringify(parsed)}`);
+            logger?.trace(
+                `parser(${JSON.stringify(
+                    obj
+                )}, ${index}, { delimiter: ${delimiter} }) : ${JSON.stringify(
+                    parsed
+                )}`
+            );
             return parsed;
         },
         /**
@@ -66,7 +76,7 @@ export const createRankedTableConstructor = ({
          * @param options
          */
         getter: (items, key, options: any = {}) => {
-            logger?.info(`${items.length} items`);
+            logger?.trace(`getter(${items}, ${key}, ${options})`);
             const pickable = items.filter(
                 (item) => typeof item.minValue !== "undefined"
             );
@@ -83,6 +93,7 @@ export const createRankedTableConstructor = ({
                     picked = item;
                 }
             });
+            logger?.trace(`getter(${items}, ${key}, ${options}): ${[picked]}`);
             return [picked];
         },
     });

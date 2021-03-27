@@ -11,10 +11,13 @@ import {
 import { Logger } from "../Logger";
 import {
     Roll20ObjectInterface,
-    createRoll20ObjectCreator,
+    IdGenerator,
+    createRoll20ObjectConstructor,
     Id,
     PlayerId,
     Roll20ObjectType,
+    Roll20ObjectShapeTypeMap,
+    Roll20Object,
 } from "../Roll20Object";
 
 import getTopLevelScope from "../util/getTopLevelScope";
@@ -32,7 +35,7 @@ export const createRoll20Sandbox = async ({
     campaign?: Roll20ObjectInterface<"campaign">;
     state?: Record<string, any>;
     logger?: Logger;
-    idGenerator: () => Id;
+    idGenerator: IdGenerator;
     pool?: Record<string, any>;
     scope?: Record<string, any>;
     wrappers?: Record<string, Function>;
@@ -46,6 +49,7 @@ export const createRoll20Sandbox = async ({
         _handlers: Record<Roll20EventName, Function[]>;
         _GM?: PlayerId;
         _withinSandbox: boolean;
+        _readyTimeout?: number;
     } = {
         _campaign: undefined,
         _pool: pool,
@@ -53,6 +57,7 @@ export const createRoll20Sandbox = async ({
         _handlers: {} as Record<Roll20EventName, Function[]>,
         _GM: undefined,
         _withinSandbox: true,
+        _readyTimeout: undefined,
     };
 
     const _fireEvent = (eventName: Roll20EventName, ...rest: any) => {
@@ -84,25 +89,14 @@ export const createRoll20Sandbox = async ({
         }
     };
 
-    const Roll20Object = createRoll20ObjectCreator({
-        logger,
+    const Roll20Object = createRoll20ObjectConstructor({
+        logger: logger?.child({
+            logName: "Roll20Object",
+        }),
         idGenerator,
         pool,
         eventGenerator: _fireEvent,
     });
-
-    // type Unwrap<T> = T extends Promise<infer U>
-    //     ? U
-    //     : T extends (...args: any) => Promise<infer U>
-    //     ? U
-    //     : T extends (...args: any) => infer U
-    //     ? U
-    //     : T;
-
-    // type X = Unwrap<Promise<"foo">>;
-
-    // type Z = typeof import("underscore");
-    // type ZZ = Unwrap<Z>;
 
     const filterObjs = (cb: (obj: any) => boolean) => {
         logger?.trace(`filterObjs()`);
@@ -113,8 +107,9 @@ export const createRoll20Sandbox = async ({
 
     const sandbox = {
         _: (undefined as unknown) as typeof import("underscore"),
-        state: state || {},
+        state: state || getTopLevelScope().state || {},
         Campaign: () => {
+            logger?.trace(`Campaign()`);
             if (!_private._campaign) {
                 const cmp =
                     campaign ||
@@ -124,14 +119,18 @@ export const createRoll20Sandbox = async ({
                 _private._campaign = cmp;
                 _private._pool[cmp.id] = cmp;
             }
+            logger?.trace(`Campaign(): ${_private._campaign}`);
             return _private._campaign;
         },
         createObj: <T extends Roll20ObjectType>(_type: T, obj: any) => {
             logger?.trace(`createObj(${_type}, ${JSON.stringify(obj)})`);
-            // console.log(new Roll20Object(_type, obj))
-            // console.log('XXX')
             const r = new Roll20Object(_type, obj);
             _private._pool[r.id] = r;
+            logger?.trace(
+                `createObj(${_type}, ${JSON.stringify(obj)}): ${JSON.stringify(
+                    r
+                )}`
+            );
             return r;
         },
         filterObjs,
@@ -144,7 +143,7 @@ export const createRoll20Sandbox = async ({
                     obj
                 )}, { caseInsensitive: ${caseInsensitive} })`
             );
-            return filterObjs((testObj: any) => {
+            const found = filterObjs((testObj: any) => {
                 let found = true;
                 Object.keys(testObj).forEach((key) => {
                     const testValue = testObj[key];
@@ -169,6 +168,21 @@ export const createRoll20Sandbox = async ({
                 });
                 return found;
             });
+            logger?.trace(
+                `findObjs(${JSON.stringify(
+                    obj
+                )}, { caseInsensitive: ${caseInsensitive} }): ${found}`
+            );
+            return found;
+        },
+        getObj: <T extends Roll20ObjectType>(
+            type: Roll20ObjectShapeTypeMap[T],
+            id: Id
+        ): Roll20ObjectInterface<T> => {
+            logger?.trace(`getObj(${type}, ${id})`);
+            const obj = _private._pool[id];
+            logger?.trace(`getObj(${type}, ${id}): ${JSON.stringify(obj)}`);
+            return obj;
         },
         getAllObjs: () => {
             logger?.trace(`getAllObjs()`);
@@ -190,8 +204,13 @@ export const createRoll20Sandbox = async ({
             }
             return char.get(`${name}_${curOrMax}`);
         },
-        log: (...rest: any[]) =>
-            (logger ? logger : console ? console : null)?.info(...rest),
+        log: (...rest: any[]) => {
+            if (!logger) {
+                throw new Error("Please just use a logger.");
+            }
+            logger.info(...rest);
+        },
+
         on: (eventName: Roll20EventName, handler: Function) => {
             logger?.trace(`on(${eventName})`);
             const subEvents = eventName.split(":");
@@ -375,18 +394,18 @@ export const createRoll20Sandbox = async ({
                     );
                 }
             }
-            if ((wrappers as Record<string, any>)[key]) {
-                logger?.info(`Custom wrapper found for "${key}". Applying.`);
-                realSandbox[key] = (wrappers as Record<string, any>)[key](
-                    realSandbox[key]
-                );
-            }
+            // if ((wrappers as Record<string, any>)[key]) {
+            //     logger?.info(`Custom wrapper found for "${key}". Applying.`);
+            //     realSandbox[key] = (wrappers as Record<string, any>)[key](
+            //         realSandbox[key]
+            //     );
+            // }
         })
     );
 
     const _registerCommand = (name: string, handler: Function) => {
         logger?.info("registering command " + name);
-        sandbox.on("chat:message", (msg: ChatMessage) => {
+        realSandbox.on("chat:message", (msg: ChatMessage) => {
             if (msg.type !== "api") {
                 return;
             }
@@ -410,50 +429,58 @@ export const createRoll20Sandbox = async ({
         return _private._withinSandbox;
     };
 
-    /**
-     * If, after a full second, we're not within the real Roll20 sandbox, fire a ready event.
-     */
-    // @ts-ignore
-    setTimeout(() => {
-        if (_isWithinSandbox()) {
-            logger?.info(
-                `Within real sandbox, so ignoring need to fire ready event.`
-            );
-            if (_private._readyEventEmitted) {
-                logger?.info(`Ready event was already heard, anyway.`);
+    if (!_isWithinSandbox()) {
+        /**
+         * If, after a full second, we're not within the real Roll20 sandbox, fire a ready event.
+         */
+        // @ts-ignore
+        _private._readyTimeout = setTimeout(() => {
+            if (_isWithinSandbox()) {
+                logger?.info(
+                    `Within real sandbox, so ignoring need to fire ready event.`
+                );
+                if (_private._readyEventEmitted) {
+                    logger?.info(`Ready event was already heard, anyway.`);
+                }
+                return;
             }
-            return;
-        }
-        if (_private._readyEventEmitted) {
+            if (_private._readyEventEmitted) {
+                logger?.info(
+                    `Outside of real sandbox, but ready event already fired. Huh. Not firing again.`
+                );
+                return;
+            }
             logger?.info(
-                `Outside of real sandbox, but ready event already fired. Huh. Not firing again.`
+                `Outside of real sandbox and ready event not fired within 1 second, so firing ready event manually.`
             );
-            return;
-        }
-        logger?.info(
-            `Outside of real sandbox and ready event not fired within 1 second, so firing ready event manually.`
-        );
-        _fireEvent("ready");
-    }, 1000);
+            _fireEvent("ready");
+        }, 1000);
+    }
 
-    const _promote: Function = (
+    const _promote = (
         keys?: (keyof SandboxAPI)[],
         // @ts-ignore
         scope: Record<string, any> = getTopLevelScope()
     ) => {
-        logger?.info("_PROMOTE");
+        logger?.trace("_promote(${keys}, ${scope})");
         let promotionKeys =
             keys || (Object.keys(realSandbox) as (keyof SandboxAPI)[]);
         logger?.info(`_PROMOTING: ${promotionKeys}`);
         promotionKeys.forEach((key) => {
-            logger?.info(`${key}, ${realSandbox[key]}`);
+            logger?.info(`${key}, ${realSandbox[key] === scope[key]}`);
             scope[key] = realSandbox[key];
         });
         return scope;
     };
 
     const _setAsGM = (playerId?: Id) => {
+        logger?.trace(`_setAsGM(${playerId})`);
         _private._GM = playerId;
+    };
+
+    const _dispose = () => {
+        logger?.trace(`_dispose()`);
+        clearTimeout(_private._readyTimeout);
     };
 
     return {
@@ -464,13 +491,15 @@ export const createRoll20Sandbox = async ({
         _global: getTopLevelScope(),
         _promote,
         _setAsGM,
-    } as typeof sandbox & {
+        _dispose,
+    } as Immutable<typeof realSandbox> & {
         _fireEvent: typeof _fireEvent;
         _registerCommand: typeof _registerCommand;
         _isWithinSandbox: typeof _isWithinSandbox;
         _global: any;
         _promote: typeof _promote;
         _setAsGM: typeof _setAsGM;
+        _dispose: typeof _dispose;
     };
 };
 

@@ -2,64 +2,66 @@ import { createRoll20Sandbox, Sandbox } from "../Roll20Sandbox";
 import { Id, Roll20ObjectInterface } from "../Roll20Object";
 import { getLogger } from "../Logger";
 import { createRankedTableConstructor } from "../CustomTable";
-import getTopLevelScope from "../util/getTopLevelScope";
 
 const logger = getLogger({
     logLevel: "TRACE",
+    logName: "Elfward",
+    // @ts-ignore
+    emissionFn: log,
 });
 
-const tracer = (name: string) => {
-    return (fn: Function) => {
-        return (...rest: any[]) => {
-            const rString = `${rest}`;
-            const argString =
-                rString.length > 50 ? rString.substr(0, 50) + "..." : rString;
-            logger.trace(`ENTERING ${name}(${argString})`);
-            const r = fn(...rest);
-            logger.trace(`EXITING  ${name}(${argString})`);
-            return r;
-        };
-    };
-};
+// const tracer = (name: string) => {
+//     return (fn: Function) => {
+//         return (...rest: any[]) => {
+//             const rString = `${rest}`;
+//             const argString =
+//                 rString.length > 50 ? rString.substr(0, 50) + "..." : rString;
+//             logger.trace(`ENTERING ${name}(${argString})`);
+//             const r = fn(...rest);
+//             logger.trace(`EXITING  ${name}(${argString})`);
+//             return r;
+//         };
+//     };
+// };
 
-// import getTopLevelScope from "../util/getTopLevelScope";
+logger.info("About to createRoll20Sandbox.");
+
 createRoll20Sandbox({
     idGenerator: () => Math.random().toString() as Id,
-    logger,
-    wrappers: {
-        on: tracer("on"),
-        sendChat: tracer("sendChat"),
-    },
+    logger: logger.child({
+        logName: "Roll20Sandbox",
+    }),
+    // wrappers: {
+    //     on: tracer("on"),
+    //     sendChat: tracer("sendChat"),
+    // },
 }).then(async (sandbox) => {
-    sandbox._promote();
+    // Once we're ready...
+    sandbox.on("ready", async () => {
+        logger.trace("on(ready) heard.");
+        // make the sandbox functions 'global' so other libraries think they are
+        // within the sandbox.
+        if (!sandbox._isWithinSandbox()) {
+            sandbox._promote();
+        }
 
-    sandbox.log(
-        `Logging from sandbox. Globals: ${Object.keys(sandbox._global)}`
-    );
-    sandbox.log(sandbox._);
-    sandbox.log(sandbox._global._);
-    sandbox.log("AGINA");
-    sandbox.log(getTopLevelScope()._);
+        // add the libraries we directly require.
 
-    console.log("COME ON.");
-    console.log(Object.keys(sandbox._));
-    console.log(Object.keys(global._));
-
-    // @ts-ignore
-    await import("../../lib/tableExport");
-
-    sandbox.on("ready", () => {
-        sandbox.log("READY BABY!");
-        logger.info("ready baby");
-
+        // @ts-ignore
+        await import("../../lib/tableExport");
+        // @ts-ignore
+        await import("../../lib/recursiveTable");
         const { _registerCommand } = sandbox;
+
+        const c = sandbox.Campaign();
+        logger.warn(c);
 
         const RankedTable = createRankedTableConstructor({
             sandbox,
-            logger,
+            logger: logger.child({
+                logName: "RankedTable",
+            }),
         });
-
-        // set up all the dcc spell casting commands.
 
         // Add a spell (using Table Export script)
         const importDCCSpell = _registerCommand(
@@ -88,14 +90,15 @@ createRoll20Sandbox({
         );
 
         // Remove all of a spell's tables
-        const removeDCCSpell = _registerCommand(
+        const deleteDCCSpell = _registerCommand(
             // !remove-dcc-spell name
-            "remove-dcc-spell",
+            "delete-dcc-spell",
             (name: string) => {
                 logger.info(`Removing DCC spell: "${name}"`);
                 // find all the tables related to the spell.
                 const tables = getDCCSpellTables(name);
                 tables.forEach((table) => {
+                    // TODO: do we need to remove the items as well?
                     table.remove();
                 });
             }
@@ -129,6 +132,27 @@ createRoll20Sandbox({
                 return;
             }
         );
+
+        const manifestDCCSpell = _registerCommand(
+            "manifest",
+            (name: string) => {
+                logger.info(`Manifesting a spell! "${name}`);
+
+                sandbox.sendChat(
+                    "",
+                    `!rt [[1t[DCC-SPELL-${name.toUpperCase()}-MANIFESTATION]]]`
+                );
+                return;
+            }
+        );
+
+        const dccSpellCommands = {
+            importDCCSpell,
+            exportDCCSpell,
+            deleteDCCSpell,
+            castDCCSpell,
+            manifestDCCSpell,
+        };
 
         const getDCCSpellTables = (
             name: string
@@ -166,6 +190,8 @@ const testElfwardLocally = (sandbox: Sandbox) => {
     logger.info("Starting local Elfward tests.");
 
     sandbox._setAsGM("GM" as Id);
+
+    sandbox.Campaign();
 
     // try a table import
     sandbox.sendChat("", "!import-table --TEST-TABLE --show");
