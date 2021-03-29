@@ -33,10 +33,6 @@ declare global {
         obj: Partial<Roll20ObjectShapeTypeMap<T>>,
         options?: { caseInsensitive?: boolean }
     ): Roll20ObjectInterface<T>[];
-    // declare function findObjs(
-    //     obj: Partial<Values<Roll20ObjectShapeTypeMap>>,
-    //     options?: { caseInsensitive?: boolean }
-    // ): Roll20ObjectInterface[];
     declare function getObj<T extends Roll20ObjectType>(
         type: Roll20ObjectShapeTypeMap[T],
         id: Id

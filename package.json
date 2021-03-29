@@ -30,7 +30,7 @@
         "test": "TS_NODE_FILES=true mocha -r ts-node/register src/**/*.spec.ts",
         "build::data": "bin/build_data.sh",
         "build": "npm run build::js && npm run build::data",
-        "start::output": "node build/output.js",
+        "start::output": "node build/local.js",
         "start::elfward": "TS_NODE_FILES=true ts-node src/Elfward/index.ts"
     },
     "repository": {
