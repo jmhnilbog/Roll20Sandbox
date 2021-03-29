@@ -20,7 +20,7 @@ import {
 
 declare global {
     declare var _: underscore.UnderscoreStatic;
-    declare var state: any;
+    declare var state: Record<string, any>;
     declare function Campaign(): Roll20ObjectInterface<"campaign">;
     declare function createObj<T extends Roll20ObjectType>(
         _type: T,
@@ -29,10 +29,14 @@ declare global {
     declare function filterObjs(
         cb: (obj: any) => boolean
     ): Roll20ObjectInterface[];
-    declare function findObjs(
-        obj: any,
+    declare function findObjs<T extends Roll20ObjectType = Roll20ObjectType>(
+        obj: Partial<Roll20ObjectShapeTypeMap<T>>,
         options?: { caseInsensitive?: boolean }
-    ): Roll20ObjectInterface[];
+    ): Roll20ObjectInterface<T>[];
+    // declare function findObjs(
+    //     obj: Partial<Values<Roll20ObjectShapeTypeMap>>,
+    //     options?: { caseInsensitive?: boolean }
+    // ): Roll20ObjectInterface[];
     declare function getObj<T extends Roll20ObjectType>(
         type: Roll20ObjectShapeTypeMap[T],
         id: Id
@@ -83,4 +87,7 @@ declare global {
     declare function stopJukeboxPlaylist(): void;
     declare function toBack(obj: Roll20ObjectInterface): void;
     declare function toFront(obj: Roll20ObjectInterface): void;
+    declare interface String {
+        splitArgs(separator?: any): string[];
+    }
 }

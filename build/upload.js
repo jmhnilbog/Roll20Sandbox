@@ -2,876 +2,6 @@ var __dirname = "";
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 75:
-/***/ (() => {
-
-// @ts-nocheck
-
-// Github:   https://github.com/shdwjk/Roll20API/blob/master/RecursiveTable/RecursiveTable.js
-// By:       The Aaron, Arcane Scriptomancer
-// Contact:  https://app.roll20.net/users/104025/the-aaron
-
-var RecursiveTable =
-    RecursiveTable ||
-    (function () {
-        'use strict'
-
-        var version = '0.2.5',
-            lastUpdate = 1571360894,
-            schemaVersion = 0.1,
-            clearURL =
-                'https://s3.amazonaws.com/files.d20.io/images/4277467/iQYjFOsYC5JsuOPUCI9RGA/thumb.png?1401938659',
-            defaults = {
-                maxdepth: 10,
-                delimiter: ', ',
-                echo: false,
-                prefix: '',
-                suffix: '',
-                dropempty: true,
-                sort: false,
-                prefaceuniquespace: false,
-                showicons: false,
-                iconlabel: true,
-                emptydefault: '',
-                iconscale: '5em',
-                who: '',
-            },
-            regex = {
-                rtCmd: /^(!rt)(?:\[([^\]]*)\])?(?:\s+|$)/,
-                inlineRoll: /\[\[.*\]\]/,
-                cssSize: /^(auto|0)$|^[+-]?[0-9]+.?([0-9]+)?(px|em|ex|%|in|cm|mm|pt|pc)$/,
-            },
-            checkInstall = function () {
-                log(
-                    '-=> RecursiveTable v' +
-                        version +
-                        ' <=-  [' +
-                        new Date(lastUpdate * 1000) +
-                        ']'
-                )
-
-                if (
-                    !_.has(state, 'RecursiveTable') ||
-                    state.RecursiveTable.version !== schemaVersion
-                ) {
-                    log('  > Updating Schema to v' + schemaVersion + ' <')
-                    state.RecursiveTable = {
-                        version: schemaVersion,
-                    }
-                }
-            },
-            sendChatP = function (msg) {
-                return new Promise((resolve) => {
-                    sendChat('', msg.replace(/\[\[\s+/g, '[['), (res) => {
-                        resolve(res[0])
-                    })
-                })
-            },
-            ch = function (c) {
-                var entities = {
-                    '<': 'lt',
-                    '>': 'gt',
-                    "'": '#39',
-                    '@': '#64',
-                    '{': '#123',
-                    '|': '#124',
-                    '}': '#125',
-                    '[': '#91',
-                    '\\': '#92',
-                    ']': '#93',
-                    '&': 'amp',
-                    '"': 'quot',
-                    '-': 'mdash',
-                    ' ': 'nbsp',
-                }
-
-                if (_.has(entities, c)) {
-                    return '&' + entities[c] + ';'
-                }
-                return ''
-            },
-            esRE = function (s) {
-                var escapeForRegexp = /(\\|\/|\[|\]|\(|\)|\{|\}|\?|\+|\*|\||\.|\^|\$)/g
-                return s.replace(escapeForRegexp, '\\$1')
-            },
-            HE = (function () {
-                var entities = {
-                        //' ' : '&'+'nbsp'+';',
-                        '<': '&' + 'lt' + ';',
-                        '>': '&' + 'gt' + ';',
-                        "'": '&' + '#39' + ';',
-                        '@': '&' + '#64' + ';',
-                        '{': '&' + '#123' + ';',
-                        '|': '&' + '#124' + ';',
-                        '}': '&' + '#125' + ';',
-                        '[': '&' + '#91' + ';',
-                        ']': '&' + '#93' + ';',
-                        '"': '&' + 'quot' + ';',
-                    },
-                    re = new RegExp(
-                        '(' + _.map(_.keys(entities), esRE).join('|') + ')',
-                        'g'
-                    )
-                return function (s) {
-                    return s.replace(re, function (c) {
-                        return entities[c] || c
-                    })
-                }
-            })(),
-            makePrefixer = function (prefix) {
-                let c = {}
-                return (val) => {
-                    val = val.trim()
-                    c[val] = c[val] || 0
-                    return prefix.repeat(c[val]++) + val
-                }
-            },
-            //	makeSuffixer = function(suffix){
-            //        let c = {};
-            //		return (val)=>{
-            //            val = val.trim();
-            //            c[val]=c[val]||0;
-            //            return val+suffix.repeat(c[val]++);
-            //        };
-            //	},
-
-            _h = {
-                outer: (...o) =>
-                    `<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">${o.join(
-                        ' '
-                    )}</div>`,
-                title: (t, v) =>
-                    `<div style="font-weight: bold; border-bottom: 1px solid black;font-size: 130%;">${t} v${v}</div>`,
-                subhead: (...o) => `<b>${o.join(' ')}</b>`,
-                minorhead: (...o) => `<u>${o.join(' ')}</u>`,
-                optional: (...o) =>
-                    `${ch('[')}${o.join(` ${ch('|')} `)}${ch(']')}`,
-                required: (...o) =>
-                    `${ch('<')}${o.join(` ${ch('|')} `)}${ch('>')}`,
-                header: (...o) =>
-                    `<div style="padding-left:10px;margin-bottom:3px;">${o.join(
-                        ' '
-                    )}</div>`,
-                section: (s, ...o) => `${_h.subhead(s)}${_h.inset(...o)}`,
-                paragraph: (...o) => `<p>${o.join(' ')}</p>`,
-                items: (o) => `<li>${o.join('</li><li>')}</li>`,
-                ol: (...o) => `<ol>${_h.items(o)}</ol>`,
-                ul: (...o) => `<ul>${_h.items(o)}</ul>`,
-                grid: (...o) =>
-                    `<div style="padding: 12px 0;">${o.join(
-                        ''
-                    )}<div style="clear:both;"></div></div>`,
-                cell: (o) =>
-                    `<div style="width: 130px; padding: 0 3px; float: left;">${o}</div>`,
-                inset: (...o) =>
-                    `<div style="padding-left: 10px;padding-right:20px">${o.join(
-                        ' '
-                    )}</div>`,
-                pre: (...o) =>
-                    `<div style="border:1px solid #e1e1e8;border-radius:4px;padding:8.5px;margin-bottom:9px;font-size:12px;white-space:normal;word-break:normal;word-wrap:normal;background-color:#f7f7f9;font-family:monospace;overflow:auto;">${o.join(
-                        ' '
-                    )}</div>`,
-                preformatted: (...o) =>
-                    _h.pre(o.join('<br>').replace(/\s/g, ch(' '))),
-                code: (...o) => `<code>${o.join(' ')}</code>`,
-                attr: {
-                    bare: (o) => `${ch('@')}${ch('{')}${o}${ch('}')}`,
-                    selected: (o) =>
-                        `${ch('@')}${ch('{')}selected${ch('|')}${o}${ch('}')}`,
-                    target: (o) =>
-                        `${ch('@')}${ch('{')}target${ch('|')}${o}${ch('}')}`,
-                    char: (o, c) =>
-                        `${ch('@')}${ch('{')}${c || 'CHARACTER NAME'}${ch(
-                            '|'
-                        )}${o}${ch('}')}`,
-                },
-                bold: (...o) => `<b>${o.join(' ')}</b>`,
-                italic: (...o) => `<i>${o.join(' ')}</i>`,
-                font: {
-                    command: (...o) =>
-                        `<b><span style="font-family:serif;">${o.join(
-                            ' '
-                        )}</span></b>`,
-                },
-            },
-            showHelp = function (playerid) {
-                let who = (
-                    getObj('player', playerid) || { get: () => 'API' }
-                ).get('_displayname')
-
-                sendChat(
-                    '',
-                    '/w "' +
-                        who +
-                        '" ' +
-                        _h.outer(
-                            _h.title('RecursiveTable', version),
-                            _h.header(
-                                _h.paragraph(
-                                    'RecursiveTable provides a way to expand the results of Rollable Tables which have inline rolls within them. Now with options and support for whispering Roll Templates.'
-                                ),
-                                _h.paragraph(
-                                    `When using Rolltemplates, your message must have at least one ${_h.code(
-                                        ch('{') + ch('{')
-                                    )} that in not coming from a Rollable Table.  When using the ${_h.code(
-                                        'PrefaceUniqueSpace'
-                                    )} option, be sure your ${_h.code(
-                                        `${ch('{')}${ch('{')}name=something${ch(
-                                            '}'
-                                        )}${ch('}')}`
-                                    )} is first.`
-                                )
-                            ),
-                            _h.subhead('Commands'),
-                            _h.inset(
-                                _h.font.command(
-                                    `!rt${_h.optional('options')} ${_h.optional(
-                                        '--help',
-                                        '...'
-                                    )}`
-                                ),
-                                _h.paragraph(
-                                    'Performs all inline rolls, then continues to expand inline rolls (to a maximum depth of around 10).'
-                                ),
-                                _h.ul(
-                                    `${_h.bold(
-                                        '--help'
-                                    )} -- Shows the Help screen`,
-                                    `${_h.bold(
-                                        '...'
-                                    )} -- Anything following ${_h.code(
-                                        '!rt'
-                                    )} will be expanded, then sent to to the chat.`
-                                ),
-
-                                _h.section('Options'),
-                                _h.paragraph(
-                                    `These are inline settings to adjust how the rolls are put together.  Options are specified in ${_h.code(
-                                        ch('[')
-                                    )} ${_h.code(
-                                        ch(']')
-                                    )} right after the ${_h.code('!rt')}:`
-                                ),
-                                _h.inset(
-                                    _h.pre(
-                                        `!rt[delimiter:-|maxdepth:20] something`
-                                    )
-                                ),
-                                _h.paragraph(
-                                    `Options are separated with the verticle pipe symbol (${_h.code(
-                                        ch('|')
-                                    )}) and have an optional argument separated by a ${_h.code(
-                                        ':'
-                                    )} or by ${_h.code(
-                                        '%%'
-                                    )} (Useful for API Command buttons where : causes problems). Omitting the argument causes ${_h.bold(
-                                        'true'
-                                    )} to be used for switch options, or the default value.  All Options are case insenstive.  Options are one of 3 types: Number (any integer), Boolean (true values: ${_h.code(
-                                        'on'
-                                    )}, ${_h.code('yes')}, ${_h.code(
-                                        'y'
-                                    )}, ${_h.code(
-                                        'true'
-                                    )}.  false values: ${_h.code(
-                                        'off'
-                                    )}, ${_h.code('no')}, ${_h.code(
-                                        'n'
-                                    )}, ${_h.code(
-                                        'false'
-                                    )}), or text (any value except ${_h.code(
-                                        ']'
-                                    )}, use ${_h.code(
-                                        ch('\\') + ch('|')
-                                    )} for ${_h.code(ch('|'))})`
-                                ),
-
-                                _h.ul(
-                                    `${_h.bold(
-                                        'MaxDepth'
-                                    )} -- Specifies the number of recursions to perform.  ${_h.bold(
-                                        'Default: 10 (Number)'
-                                    )}`,
-                                    `${_h.bold(
-                                        'Delimiter'
-                                    )} -- A string of text to put between table items. The special value ${_h.code(
-                                        'BR'
-                                    )} will cause html line breaks to be used. ${_h.bold(
-                                        `Default: ${_h.code(', ')} (String)`
-                                    )}`,
-                                    `${_h.bold(
-                                        'DropEmpty'
-                                    )} -- Causes empty table items to be dropped before joining with the delimiter. ${_h.bold(
-                                        'Default: on (Boolean)'
-                                    )}`,
-                                    `${_h.bold(
-                                        'Sort'
-                                    )} -- Causes table items to be sorted before being joined by the delimiter.  Note that this happens at a single layer of recursion, so if you have table items made of of lists of table items, the sorting will only be at each level. ${_h.bold(
-                                        'Default: off (Boolean)'
-                                    )}`,
-                                    `${_h.bold(
-                                        'PrefaceUniqueSpace'
-                                    )} -- Causes the final message to have a unique number of spaces inserted after each ${_h.code(
-                                        ch('{') + ch('{')
-                                    )}. This is useful if you${ch(
-                                        "'"
-                                    )}re building Roll Templates and might have multiple lines with the same label. ${_h.bold(
-                                        'Default: off (Boolean)'
-                                    )}`,
-                                    `${_h.bold(
-                                        'ShowIcons'
-                                    )} -- Adds table avatars as inline icons, if they exist. ${_h.bold(
-                                        'Default: off (Boolean)'
-                                    )}`,
-                                    `${_h.bold(
-                                        'IconLabel'
-                                    )} -- When table icons are shown, the text for the row is shown as a label below it. ${_h.bold(
-                                        'Default: on (Boolean)'
-                                    )}`,
-                                    `${_h.bold(
-                                        'IconScale'
-                                    )} -- When table icons are shown, they are restricted to the provided scale. Any valid CSS size setting will work. ${_h.bold(
-                                        'Default: 5em'
-                                    )}`
-                                ),
-
-                                _h.section('Examples'),
-
-                                _h.paragraph(
-                                    'Basic usage, whispering treasure to the gm:'
-                                ),
-                                _h.inset(
-                                    _h.pre(
-                                        `!rt /w gm ${ch('[') + ch('[')}1t${ch(
-                                            '['
-                                        )}treasure-table${
-                                            ch(']') + ch(']') + ch(']')
-                                        }`
-                                    )
-                                ),
-
-                                _h.paragraph('Whispering a roll template:'),
-                                _h.inset(
-                                    _h.pre(
-                                        `!rt /w gm ${
-                                            ch('&') + ch('{')
-                                        }template:default${
-                                            ch('}') + ch('{') + ch('{')
-                                        }treasure=${ch('[') + ch('[')}1t${ch(
-                                            '['
-                                        )}treasure-table${
-                                            ch(']') +
-                                            ch(']') +
-                                            ch(']') +
-                                            ch('}') +
-                                            ch('}')
-                                        }`
-                                    )
-                                ),
-
-                                _h.paragraph(
-                                    'Whispering a roll template, with each item on a separate line:'
-                                ),
-                                _h.inset(
-                                    _h.pre(
-                                        `!rt${ch('[')}Delimiter:BR${ch(
-                                            ']'
-                                        )} /w gm ${
-                                            ch('&') + ch('{')
-                                        }template:default${
-                                            ch('}') + ch('{') + ch('{')
-                                        }treasure=${ch('[') + ch('[')}1t${ch(
-                                            '['
-                                        )}treasure-table${
-                                            ch(']') +
-                                            ch(']') +
-                                            ch(']') +
-                                            ch('}') +
-                                            ch('}')
-                                        }`
-                                    )
-                                ),
-
-                                _h.paragraph(
-                                    `Whispering a roll template, with each item on a separate line, with empty results replaced by ${_h.code(
-                                        'Nothing'
-                                    )}:`
-                                ),
-                                _h.inset(
-                                    _h.pre(
-                                        `!rt${ch(
-                                            '['
-                                        )}Delimiter:BR|EmptyDefault:Nothing${ch(
-                                            ']'
-                                        )} /w gm ${
-                                            ch('&') + ch('{')
-                                        }template:default${
-                                            ch('}') + ch('{') + ch('{')
-                                        }treasure=${ch('[') + ch('[')}1t${ch(
-                                            '['
-                                        )}treasure-table${
-                                            ch(']') +
-                                            ch(']') +
-                                            ch(']') +
-                                            ch('}') +
-                                            ch('}')
-                                        }`
-                                    )
-                                ),
-
-                                _h.paragraph(
-                                    `Whispering a roll template, with each item on a separate line, with a table that is returning ${_h.code(
-                                        `${ch('{') + ch('{')}label=values${
-                                            ch('}') + ch('}')
-                                        }`
-                                    )}:`
-                                ),
-                                _h.inset(
-                                    _h.pre(
-                                        `!rt${ch(
-                                            '['
-                                        )}Delimiter:BR|PrefaceUniqueSpace${ch(
-                                            ']'
-                                        )} ${
-                                            ch('&') + ch('{')
-                                        }template:default${
-                                            ch('}') + ch('{') + ch('{')
-                                        }name=Treasure Bundles${
-                                            ch('}') +
-                                            ch('}') +
-                                            ch('[') +
-                                            ch('[')
-                                        }5t${ch('[')}treasure-bundle${
-                                            ch(']') + ch(']') + ch(']')
-                                        }`
-                                    )
-                                )
-                            )
-                        )
-                )
-            },
-            getAsBoolean = function (val, defVal) {
-                let isTrue = _.isBoolean(val)
-                        ? val
-                        : _.contains(
-                              ['on', 'yes', 'y', 'true'],
-                              (`${val}` || 'true').toLowerCase()
-                          ),
-                    isFalse = _.isBoolean(val)
-                        ? !val
-                        : _.contains(
-                              ['off', 'no', 'n', 'false'],
-                              (`${val}` || 'true').toLowerCase()
-                          )
-                if (isTrue || isFalse) {
-                    return !isFalse
-                }
-                return !_.isUndefined(defVal) ? defVal : val
-            },
-            parseOptions = function (cmdOpts) {
-                return _.chain(
-                    (cmdOpts || '')
-                        .replace(/((?:\\.|[^|])*)\|/g, '$1\n')
-                        .replace(/\\/, '')
-                        .split(/\n/)
-                )
-                    .filter((a) => a.length)
-                    .reduce((m, o) => {
-                        let tok = o.split(/(?:%%|:)/),
-                            c = tok.shift().toLowerCase(),
-                            a = tok.join(':') || true
-                        switch (c) {
-                            case 'maxdepth':
-                                a = parseInt(a, 10) || defaults[c]
-                                break
-                            case 'iconscale':
-                                {
-                                    if (!regex.cssSize.test(a)) {
-                                        a = defaults[c]
-                                    }
-                                }
-                                break
-                            case 'showicons':
-                            case 'iconlabel':
-                            case 'dropempty':
-                            case 'sort':
-                            case 'prefaceuniquespace':
-                            case 'echo':
-                                a = getAsBoolean(a, defaults[c])
-                                break
-                            case 'emptydefault':
-                                break
-                            case 'prefix':
-                            case 'suffix':
-                            case 'delimiter':
-                                switch (a.toLowerCase()) {
-                                    case 'br':
-                                        a = '<br>'
-                                        break
-                                    default:
-                                }
-                                break
-                        }
-
-                        m[c] = a
-                        return m
-                    }, _.clone(defaults))
-                    .value()
-            },
-            rollAndParseInlines = function (roll, opts) {
-                return new Promise((returnText) => {
-                    sendChatP(roll)
-                        .then((msg) => {
-                            parseInlines(msg.inlinerolls, opts)
-                                .then((subs) => {
-                                    returnText(
-                                        _.reduce(
-                                            subs,
-                                            (m, v, k) => m.replace(k, v),
-                                            msg.content
-                                        )
-                                    )
-                                })
-                                .catch((e) => {
-                                    let eRoll = HE(roll)
-                                    sendChat(
-                                        `RecursiveTables`,
-                                        `/w "${opts.who}" <div>An error occured while filling the results of this roll: <code>${eRoll}</code></div><div>Error: <code>${e.message}</code></div>`
-                                    )
-                                })
-                        })
-                        .catch((e) => {
-                            let eRoll = HE(roll)
-                            sendChat(
-                                `RecursiveTables`,
-                                `/w "${opts.who}" <div>An error occured parsing this roll: <code>${eRoll}</code></div><div>Error: <code>${e.message}</code></div>`
-                            )
-                        })
-                })
-            },
-            avatarCache = {},
-            lookupAvatar = (tableitemid) => {
-                let avatar = (
-                    getObj('tableitem', tableitemid) || { get: () => null }
-                ).get('avatar')
-                avatarCache[tableitemid] = avatar
-                return avatar
-            },
-            getAvatar = (tableitemid) =>
-                avatarCache[tableitemid] || lookupAvatar(tableitemid),
-            parseInlines = function (inlines, opts) {
-                const styles = {
-                    o: {
-                        display: 'inline-block',
-                        'max-width': '20em',
-                        'text-align': 'center',
-                        border: '1px solid #aaa',
-                        'border-radius': '3px',
-                        'background-color': 'white',
-                        margin: '.1em',
-                    },
-                    i: {
-                        'max-width': opts.iconscale,
-                        'max-height': opts.iconscale,
-                    },
-                    t: {
-                        'border-top': '1px solid #aaa',
-                        'background-color': '#eee',
-                        padding: '.1em',
-                    },
-                }
-
-                const s = (o) => _.map(o, (v, k) => `${k}:${v};`).join('')
-                const formatPart = (part) =>
-                    opts.showicons && part.avatar
-                        ? `<div style="${s(styles.o)}">` +
-                          `<img style="${s(styles.i)}" src="${
-                              part.avatar || clearURL
-                          }">` +
-                          (opts.iconlabel
-                              ? `<div style="${s(styles.t)}">${
-                                    part.text || ch(' ')
-                                }</div>`
-                              : '') +
-                          `</div>`
-                        : part.text
-                const composeParts = (parts) =>
-                    _.compose(
-                        (x) => _.map(x, formatPart),
-                        opts.sort ? (x) => _.sortBy(x, 'text') : _.identity,
-                        opts.dropempty
-                            ? (x) =>
-                                  _.filter(
-                                      x,
-                                      (v) =>
-                                          `${v.text}${
-                                              opts.showicons ? v.avatar : ''
-                                          }`.trim().length
-                                  )
-                            : _.identity
-                    )(parts)
-                        .map((o) => `${opts.prefix}${o}${opts.suffix}`)
-                        .join(opts.delimiter)
-
-                return new Promise((returnSubs) => {
-                    let subOpts = _.clone(opts),
-                        subs = {},
-                        context = {},
-                        promises = []
-
-                    --subOpts.maxdepth
-
-                    _.each(inlines, (rollRecord, msgIdx) => {
-                        const key = `$[[${msgIdx}]]`,
-                            result = rollRecord.results.total
-
-                        context[key] = {
-                            result: rollRecord.results.total,
-                        }
-
-                        _.each(rollRecord.results.rolls, (roll) => {
-                            if (_.has(roll, 'table')) {
-                                context[key].hasText = false
-                                context[key].parts = []
-                                context[key].sentinal = 0
-
-                                _.each(roll.results, (die, dieIdx) => {
-                                    if (
-                                        _.has(die, 'tableItem') &&
-                                        _.isString(die.tableItem.name) &&
-                                        !die.tableItem.name.match(/^\d+$/)
-                                    ) {
-                                        if (
-                                            regex.inlineRoll.test(
-                                                die.tableItem.name
-                                            ) &&
-                                            subOpts.maxdepth
-                                        ) {
-                                            ++context[key].sentinal
-
-                                            promises.push(
-                                                new Promise((done) => {
-                                                    rollAndParseInlines(
-                                                        die.tableItem.name,
-                                                        subOpts
-                                                    )
-                                                        .then((text) => {
-                                                            context[key].parts[
-                                                                dieIdx
-                                                            ] = {
-                                                                text: text,
-                                                                avatar:
-                                                                    die
-                                                                        .tableItem
-                                                                        .avatar ||
-                                                                    getAvatar(
-                                                                        die
-                                                                            .tableItem
-                                                                            .id
-                                                                    ),
-                                                            }
-
-                                                            --context[key]
-                                                                .sentinal
-                                                            if (
-                                                                !context[key]
-                                                                    .sentinal
-                                                            ) {
-                                                                subs[
-                                                                    key
-                                                                ] = composeParts(
-                                                                    context[key]
-                                                                        .parts
-                                                                )
-                                                            }
-                                                            done(true)
-                                                        })
-                                                        .catch((e) => {
-                                                            let eRoll = HE(
-                                                                die.tableItem
-                                                                    .name
-                                                            )
-                                                            sendChat(
-                                                                `RecursiveTables`,
-                                                                `/w "${opts.who}" <div>An Error occured with this TableItem: <code>${eRoll}</code></div><div>Error: <code>${e.message}</code></div>`
-                                                            )
-                                                        })
-                                                })
-                                            )
-                                        } else {
-                                            context[key].parts[dieIdx] = {
-                                                text:
-                                                    `${die.tableItem.name}`.trim() ||
-                                                    opts.emptydefault,
-                                                avatar:
-                                                    die.tableItem.avatar ||
-                                                    getAvatar(die.tableItem.id),
-                                            }
-                                        }
-                                        context[key].hasText = true
-                                    } else {
-                                        context[key].parts[dieIdx] = die.v
-                                    }
-                                })
-
-                                if (
-                                    context[key].hasText &&
-                                    !context[key].sentinal
-                                ) {
-                                    subs[key] = composeParts(context[key].parts)
-                                } else {
-                                    subs[key] = result
-                                }
-                            } else {
-                                subs[key] = result
-                            }
-                        })
-                    })
-
-                    if (promises.length) {
-                        Promise.all(promises)
-                            .then(() => {
-                                returnSubs(subs)
-                            })
-                            .catch((e) => {
-                                let eRoll = HE(
-                                    _.pluck(inlines, 'expression').join(', ')
-                                )
-                                sendChat(
-                                    `RecursiveTables`,
-                                    `/w "${opts.who}" <div>An Error occurred: <code>${eRoll}</code></div><div>Error: <code>${e.message}</code></div>`
-                                )
-                            })
-                    } else {
-                        returnSubs(subs)
-                    }
-                })
-            },
-            parseMessage = function (msg, opts) {
-                parseInlines(msg.inlinerolls, opts)
-                    .then((subs) => {
-                        msg.content = _.reduce(
-                            subs,
-                            (m, v, k) => m.replace(k, v),
-                            msg.content
-                        )
-
-                        let prefixer = opts.prefaceuniquespace
-                            ? makePrefixer(' ')
-                            : _.identity
-                        msg.content = (msg.content || '[EMPTY]').replace(
-                            /(?:\{\{)([^=]*)(?:=)/g,
-                            (full, match) => `{{${prefixer(match)}=`
-                        )
-
-                        if (
-                            _.has(msg, 'rolltemplate') &&
-                            _.isString(msg.rolltemplate) &&
-                            msg.rolltemplate.length
-                        ) {
-                            msg.content = msg.content.replace(
-                                /\{\{/,
-                                '&{template:' + msg.rolltemplate + '} {{'
-                            )
-                        }
-                        if (
-                            opts.echo &&
-                            !(
-                                /^\/w\s+gm\s+/.test(msg.content) &&
-                                playerIsGM(msg.playerid)
-                            )
-                        ) {
-                            sendChat(
-                                `${msg.who} [echo]`,
-                                `/w "${opts.who}" ${msg.content.replace(
-                                    /^\/w\s+(?:"[^"]*"|'[^']'|\S+)\s*/,
-                                    ''
-                                )}`
-                            )
-                        }
-                        sendChat(msg.who || '[BLANK]', msg.content)
-                    })
-                    .catch((e) => {
-                        let eRoll = HE(msg.content)
-                        sendChat(
-                            `RecursiveTables`,
-                            `/w "${opts.who}" <div>An Error occured with this message: <code>${eRoll}</code></div><div>Error: <code>${e.message}</code></div>`
-                        )
-                    })
-            },
-            handleInput = function (msg_orig) {
-                var msg = _.clone(msg_orig),
-                    args,
-                    who,
-                    cmd,
-                    opts
-                try {
-                    if (msg.type !== 'api') {
-                        return
-                    }
-                    who = (
-                        getObj('player', msg.playerid) || { get: () => 'API' }
-                    ).get('_displayname')
-
-                    cmd = (msg.content.match(regex.rtCmd) || []).splice(1)
-                    args = msg.content
-                        .replace(regex.rtCmd, '')
-                        .trim()
-                        .split(/\s+/)
-                    switch (cmd[0]) {
-                        case '!rt':
-                            if ('--help' === args[0]) {
-                                showHelp(msg.playerid)
-                            } else {
-                                opts = parseOptions(cmd[1])
-                                opts.who = who
-                                msg.content = msg.content.replace(
-                                    regex.rtCmd,
-                                    ''
-                                )
-                                parseMessage(msg, opts)
-                            }
-                            break
-                    }
-                } catch (e) {
-                    let who = (
-                        getObj('player', msg_orig.playerid) || {
-                            get: () => 'API',
-                        }
-                    ).get('_displayname')
-                    sendChat(
-                        'RecursiveTables',
-                        `/w "${who}" ` +
-                            `<div style="border:1px solid black; background-color: #ffeeee; padding: .2em; border-radius:.4em;" >` +
-                            `<div>There was an error while trying to run your command:</div>` +
-                            `<div style="margin: .1em 1em 1em 1em;"><code>${msg_orig.content}</code></div>` +
-                            `<div>Please <a class="showtip tipsy" title="The Aaron's profile on Roll20." style="color:blue; text-decoration: underline;" href="https://app.roll20.net/users/104025/the-aaron">send me this information</a> so I can make sure this doesn't happen again (triple click for easy select in most browsers.):</div>` +
-                            `<div style="font-size: .6em; line-height: 1em;margin:.1em .1em .1em 1em; padding: .1em .3em; color: #666666; border: 1px solid #999999; border-radius: .2em; background-color: white;">` +
-                            JSON.stringify({ msg: msg_orig, stack: e.stack }) +
-                            `</div>` +
-                            `</div>`
-                    )
-                }
-            },
-            registerEventHandlers = function () {
-                on('chat:message', handleInput)
-            }
-
-        return {
-            CheckInstall: checkInstall,
-            RegisterEventHandlers: registerEventHandlers,
-        }
-    })()
-
-on('ready', function () {
-    'use strict'
-
-    RecursiveTable.CheckInstall()
-    RecursiveTable.RegisterEventHandlers()
-})
-
-
-/***/ }),
-
 /***/ 79:
 /***/ (() => {
 
@@ -938,497 +68,6 @@ if (!bshields.splitArgs) {
       return bshields.splitArgs(this, separator);
     };
 }
-
-
-/***/ }),
-
-/***/ 574:
-/***/ (() => {
-
-// @ts-nocheck
-
-// Github:   https://github.com/shdwjk/Roll20API/blob/master/TableExport/TableExport.js
-// By:       The Aaron, Arcane Scriptomancer
-// Contact:  https://app.roll20.net/users/104025/the-aaron
-
-var TableExport =
-    TableExport ||
-    (function () {
-        "use strict";
-
-        var version = "0.2.4",
-            lastUpdate = 1576529132,
-            tableCache = {},
-            escapes = {
-                "[": "<%%91%%>",
-                "]": "<%%93%%>",
-                "--": "<%%-%%>",
-                " --": "[TABLEEXPORT:ESCAPE]",
-            },
-            esRE = function (s) {
-                var escapeForRegexp = /(\\|\/|\[|\]|\(|\)|\{|\}|\?|\+|\*|\||\.|\^|\$)/g;
-                return s.replace(escapeForRegexp, "\\$1");
-            },
-            ch = function (c) {
-                var entities = {
-                    "<": "lt",
-                    ">": "gt",
-                    "'": "#39",
-                    "@": "#64",
-                    "*": "ast",
-                    "`": "#96",
-                    "{": "#123",
-                    "|": "#124",
-                    "}": "#125",
-                    "[": "#91",
-                    "]": "#93",
-                    '"': "quot",
-                    "-": "mdash",
-                    " ": "nbsp",
-                };
-
-                if (_.has(entities, c)) {
-                    return "&" + entities[c] + ";";
-                }
-                return "";
-            },
-            checkInstall = function () {
-                log(
-                    "-=> TableExport v" +
-                        version +
-                        " <=-  [" +
-                        new Date(lastUpdate * 1000) +
-                        "]"
-                );
-            },
-            showHelp = function () {
-                sendChat(
-                    "",
-                    "/w gm " +
-                        '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
-                        '<div style="font-weight: bold; border-bottom: 1px solid black;font-size: 130%;">' +
-                        "TableExport v" +
-                        version +
-                        "</div>" +
-                        '<div style="padding-left:10px;margin-bottom:3px;">' +
-                        "<p>This script dumps commands to the chat for reconstructing a rollable table on another campaign.  While this can be done on your own campaigns via the transmogrifier, this script allows you to pass those commands to a friend and thus share your own creative works with others.<p>" +
-                        "<p><b>Caveat:</b> Avatar images that are not in your own library will be ignored by the API on import, but will not prevent creation of the table and table items.</p>" +
-                        "</div>" +
-                        "<b>Commands</b>" +
-                        '<div style="padding-left:10px;">' +
-                        '<b><span style="font-family: serif;">!export-table --' +
-                        ch("<") +
-                        "Table Name" +
-                        ch(">") +
-                        " [ --" +
-                        ch("<") +
-                        "Table Name" +
-                        ch(">") +
-                        " ...]</span></b>" +
-                        '<div style="padding-left: 10px;padding-right:20px">' +
-                        "<p>For all table names, case is ignored and you may use partial names so long as they are unique.  For example, " +
-                        ch('"') +
-                        "King Maximillian" +
-                        ch('"') +
-                        " could be called " +
-                        ch('"') +
-                        "max" +
-                        ch('"') +
-                        " as long as " +
-                        ch('"') +
-                        "max" +
-                        ch('"') +
-                        " does not appear in any other table names.  Exception:  An exact match will trump a partial match.  In the previous example, if a table named " +
-                        ch('"') +
-                        "Max" +
-                        ch('"') +
-                        " existed, it would be the only table matched for <b>--max</b>.</p>" +
-                        "<ul>" +
-                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
-                        '<b><span style="font-family: serif;">--' +
-                        ch("<") +
-                        "Table Name" +
-                        ch(">") +
-                        "</span></b> " +
-                        ch("-") +
-                        " This is the name of a table to export.  You can specify as many tables as you like in a single command." +
-                        "</li> " +
-                        "</ul>" +
-                        "</div>" +
-                        "</div>" +
-                        '<div style="padding-left:10px;">' +
-                        '<b><span style="font-family: serif;">!import-table --' +
-                        ch("<") +
-                        "Table Name" +
-                        ch(">") +
-                        " --" +
-                        ch("<") +
-                        "[ show | hide ]" +
-                        ch(">") +
-                        "</span></b>" +
-                        '<div style="padding-left: 10px;padding-right:20px">' +
-                        "<p>This is the command output by <b>!export-table</b> to create the new table.  You likely will not need issue these commands directly.</p>" +
-                        "<ul>" +
-                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
-                        '<b><span style="font-family: serif;">--' +
-                        ch("<") +
-                        "Table Name" +
-                        ch(">") +
-                        "</span></b> " +
-                        ch("-") +
-                        " This is the name of the table to be create." +
-                        "</li> " +
-                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
-                        '<b><span style="font-family: serif;">--' +
-                        ch("<") +
-                        "[ show | hide ]" +
-                        ch(">") +
-                        "</span></b> " +
-                        ch("-") +
-                        " This whether to show the table to players or hide it." +
-                        "</li> " +
-                        "</ul>" +
-                        "</div>" +
-                        "</div>" +
-                        '<div style="padding-left:10px;">' +
-                        '<b><span style="font-family: serif;">!import-table-item --' +
-                        ch("<") +
-                        "Table Name" +
-                        ch(">") +
-                        " --" +
-                        ch("<") +
-                        "Table Item Name" +
-                        ch(">") +
-                        " --" +
-                        ch("<") +
-                        "Weight" +
-                        ch(">") +
-                        " --" +
-                        ch("<") +
-                        "Avatar URL" +
-                        ch(">") +
-                        "</span></b>" +
-                        '<div style="padding-left: 10px;padding-right:20px">' +
-                        "<p>This is the command output by <b>!export-table</b> to create the new table.  You likely will not need issue these commands directly.</p>" +
-                        "<ul>" +
-                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
-                        '<b><span style="font-family: serif;">--' +
-                        ch("<") +
-                        "Table Name" +
-                        ch(">") +
-                        "</span></b> " +
-                        ch("-") +
-                        " This is the name of the table to add items to.  <b>Note:</b> unlike for <b>!export-table</b>, this must be an exact name match to the created table." +
-                        "</li> " +
-                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
-                        '<b><span style="font-family: serif;">--' +
-                        ch("<") +
-                        "Table Item Name" +
-                        ch(">") +
-                        "</span></b> " +
-                        ch("-") +
-                        " This is the name of the table item to create.  <b>Note:</b> Because the string " +
-                        ch('"') +
-                        " --" +
-                        ch('"') +
-                        " may occur in a table item name, you may see " +
-                        ch('"') +
-                        "[TABLEEXPORT:ESCAPE]" +
-                        ch('"') +
-                        " show up as a replacement in these commands.  This value is corrected internally to the correct " +
-                        ch('"') +
-                        " --" +
-                        ch('"') +
-                        " sequence on import." +
-                        "</li> " +
-                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
-                        '<b><span style="font-family: serif;">--' +
-                        ch("<") +
-                        "Weight" +
-                        ch(">") +
-                        "</span></b> " +
-                        ch("-") +
-                        " This is the weight for this table item and should be an integer value." +
-                        "</li> " +
-                        '<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">' +
-                        '<b><span style="font-family: serif;">--' +
-                        ch("<") +
-                        "Avatar URL" +
-                        ch(">") +
-                        "</span></b> " +
-                        ch("-") +
-                        " This is the URL for the avatar image of the table item." +
-                        "</li> " +
-                        "</ul>" +
-                        "</div>" +
-                        "</div>" +
-                        "</div>"
-                );
-            },
-            nameEscape = (function () {
-                var re = new RegExp(
-                    "(" + _.map(_.keys(escapes), esRE).join("|") + ")",
-                    "g"
-                );
-                return function (s) {
-                    return s.replace(re, function (c) {
-                        return escapes[c] || c;
-                    });
-                };
-            })(),
-            nameUnescape = (function () {
-                var sepacse = _.invert(escapes),
-                    re = new RegExp(
-                        "(" + _.map(_.keys(sepacse), esRE).join("|") + ")",
-                        "g"
-                    );
-                return function (s) {
-                    return s.replace(re, function (c) {
-                        return sepacse[c] || c;
-                    });
-                };
-            })(),
-            handleInput = function (msg) {
-                var args,
-                    matches,
-                    tables,
-                    tableIDs = [],
-                    errors = [],
-                    items,
-                    itemMatches,
-                    accum = "";
-
-                if (msg.type !== "api" || !playerIsGM(msg.playerid)) {
-                    return;
-                }
-
-                args = msg.content.split(/\s+/);
-                switch (args[0]) {
-                    case "!import-table":
-                        args = msg.content.split(/\s+--/);
-                        if (args.length === 1) {
-                            showHelp();
-                            break;
-                        }
-                        if (_.has(tableCache, args[1])) {
-                            sendChat(
-                                "",
-                                "/w gm " +
-                                    '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
-                                    '<span style="font-weight:bold;color:#990000;">Warning:</span> ' +
-                                    "Table [" +
-                                    args[1] +
-                                    "] already exists, skipping create." +
-                                    "</div>"
-                            );
-                        } else {
-                            tableIDs = findObjs({
-                                type: "rollabletable",
-                                name: args[1],
-                            });
-                            if (tableIDs.length) {
-                                sendChat(
-                                    "",
-                                    "/w gm " +
-                                        '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
-                                        '<span style="font-weight:bold;color:#990000;">Warning:</span> ' +
-                                        "Table [" +
-                                        args[1] +
-                                        "] already exists, skipping create." +
-                                        "</div>"
-                                );
-                            } else {
-                                tableIDs = createObj("rollabletable", {
-                                    name: args[1],
-                                    showplayers: "show" === args[2],
-                                });
-                                tableCache[args[1]] = tableIDs.id;
-                            }
-                        }
-                        break;
-
-                    case "!import-table-item":
-                        args = msg.content.split(/\s+--/);
-                        if (args.length === 1) {
-                            showHelp();
-                            break;
-                        }
-                        args[2] = nameUnescape(args[2]);
-                        if (!_.has(tableCache, args[1])) {
-                            tableIDs = findObjs({
-                                type: "rollabletable",
-                                name: args[1],
-                            });
-                            if (!tableIDs.length) {
-                                sendChat(
-                                    "",
-                                    "/w gm " +
-                                        '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
-                                        '<span style="font-weight:bold;color:#990000;">Error:</span> ' +
-                                        "Table [" +
-                                        args[1] +
-                                        "] doesn not exist.  Cannot create table item." +
-                                        "</div>"
-                                );
-                                break;
-                            } else {
-                                tableCache[args[1]] = tableIDs[0].id;
-                            }
-                        }
-                        createObj("tableitem", {
-                            name: args[2],
-                            rollabletableid: tableCache[args[1]],
-                            weight: parseInt(args[3], 10) || 1,
-                            avatar: args[4] || "",
-                        });
-                        break;
-
-                    case "!export-table":
-                        args = msg.content.split(/\s+--/);
-                        if (args.length === 1) {
-                            showHelp();
-                            break;
-                        }
-                        tables = findObjs({ type: "rollabletable" });
-                        matches = _.chain(args)
-                            .rest()
-                            .map(function (n) {
-                                var l = _.filter(tables, function (t) {
-                                    return (
-                                        t.get("name").toLowerCase() ===
-                                        n.toLowerCase()
-                                    );
-                                });
-                                return 1 === l.length
-                                    ? l
-                                    : _.filter(tables, function (t) {
-                                          return (
-                                              -1 !==
-                                              t
-                                                  .get("name")
-                                                  .toLowerCase()
-                                                  .indexOf(n.toLowerCase())
-                                          );
-                                      });
-                            })
-                            .value();
-
-                        _.each(
-                            matches,
-                            function (o, idx) {
-                                if (1 !== o.length) {
-                                    if (o.length) {
-                                        errors.push(
-                                            "Rollable Table [<b>" +
-                                                args[idx + 1] +
-                                                "</b>] is ambiguous and matches " +
-                                                o.length +
-                                                " names: <b><i> " +
-                                                _.map(o, function (e) {
-                                                    return e.get("name");
-                                                }).join(", ") +
-                                                "</i></b>"
-                                        );
-                                    } else {
-                                        errors.push(
-                                            "Rollable Table [<b>" +
-                                                args[idx + 1] +
-                                                "</b>] does not match any names."
-                                        );
-                                    }
-                                }
-                            },
-                            errors
-                        );
-
-                        if (errors.length) {
-                            sendChat(
-                                "",
-                                "/w gm " +
-                                    '<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">' +
-                                    '<div><span style="font-weight:bold;color:#990000;">Error:</span> ' +
-                                    errors.join(
-                                        '</div><div><span style="font-weight:bold;color:#990000;">Error:</span> '
-                                    ) +
-                                    "</div>" +
-                                    "</div>"
-                            );
-                            break;
-                        }
-
-                        if (!errors.length) {
-                            matches = _.chain(matches)
-                                .flatten(true)
-                                .map(function (t) {
-                                    tableIDs.push(t.id);
-                                    return t;
-                                })
-                                .value();
-
-                            items = findObjs({ type: "tableitem" });
-                            itemMatches = _.chain(items)
-                                .filter(function (i) {
-                                    return _.contains(
-                                        tableIDs,
-                                        i.get("rollabletableid")
-                                    );
-                                })
-                                .reduce(function (memo, e) {
-                                    if (
-                                        !_.has(memo, e.get("rollabletableid"))
-                                    ) {
-                                        memo[e.get("rollabletableid")] = [e];
-                                    } else {
-                                        memo[e.get("rollabletableid")].push(e);
-                                    }
-                                    return memo;
-                                }, {})
-                                .value();
-                            _.each(matches, function (t) {
-                                accum +=
-                                    "!import-table --" +
-                                    nameEscape(t.get("name")) +
-                                    " --" +
-                                    (t.get("showplayers") ? "show" : "hide") +
-                                    "<br>";
-                                _.each(itemMatches[t.id], function (i) {
-                                    accum +=
-                                        "!import-table-item --" +
-                                        nameEscape(t.get("name")) +
-                                        " --" +
-                                        nameEscape(i.get("name")) +
-                                        " --" +
-                                        i.get("weight") +
-                                        " --" +
-                                        i.get("avatar") +
-                                        "<br>";
-                                });
-                            });
-                            sendChat("", "/w gm " + accum);
-                        }
-                        break;
-                }
-            },
-            handleRemoveTable = function (obj) {
-                tableCache = _.without(tableCache, obj.id);
-            },
-            registerEventHandlers = function () {
-                on("chat:message", handleInput);
-                on("destroy:rollabletable", handleRemoveTable);
-            };
-
-        return {
-            CheckInstall: checkInstall,
-            RegisterEventHandlers: registerEventHandlers,
-        };
-    })();
-
-on("ready", function () {
-    "use strict";
-
-    TableExport.CheckInstall();
-    TableExport.RegisterEventHandlers();
-});
 
 
 /***/ }),
@@ -3487,6 +2126,7 @@ const getTopLevelScope_1 = __importDefault(__nccwpck_require__(992));
  * to actually work within the actual Roll20 sandbox environment.
  */
 const createCustomTableConstructor = ({ parser, getter, sandbox, logger, }) => {
+    const _instances = {};
     const CustomTable = class CustomTable {
         /**
          * @param table - a rollabletable object 'backing' this table.
@@ -3495,6 +2135,14 @@ const createCustomTableConstructor = ({ parser, getter, sandbox, logger, }) => {
         constructor(table, options = {}) {
             logger === null || logger === void 0 ? void 0 : logger.trace(`constructor(${table.id}, ${options})`);
             this._rollabletableid = table.id;
+        }
+        static getTable(table, options = {}) {
+            logger === null || logger === void 0 ? void 0 : logger.trace(`getTable(${table.id}, ${options})`);
+            const key = `${table.get("name")}_${JSON.stringify(options)}`;
+            if (!_instances[key]) {
+                _instances[key] = new CustomTable(table, options);
+            }
+            return _instances[key];
         }
         /**
          * Get all custom table items as understood by the supplied parser.
@@ -3526,6 +2174,44 @@ const createCustomTableConstructor = ({ parser, getter, sandbox, logger, }) => {
 };
 exports.createCustomTableConstructor = createCustomTableConstructor;
 exports.default = exports.createCustomTableConstructor;
+
+
+/***/ }),
+
+/***/ 95:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCustomTableMessageHandler = void 0;
+const createCustomTableMessageHandler = ({ sandbox, logger, TableConstructor, }) => {
+    const inlineRegExp = /(\[\[1t\[([A-Z0-9]+) (\d+)\]\]\])/g;
+    const handler = (msg) => {
+        logger === null || logger === void 0 ? void 0 : logger.trace(`handler(${JSON.stringify(msg)})`);
+        let result;
+        let content = msg.content;
+        while ((result = inlineRegExp.exec(content))) {
+            const [_, all, tableName, key] = result;
+            const tables = sandbox.findObjs({
+                _type: "rollabletable",
+                name: tableName,
+            });
+            if (tables.length !== 1) {
+                logger === null || logger === void 0 ? void 0 : logger.warn(`Wrong number of tables found: ${tables.length}. Ignoring.`);
+                return;
+            }
+            const customTable = TableConstructor.getTable(tables[0]);
+            const value = customTable.getAtKey(key);
+            // replace the text of the message.
+            content = content.replace(all, value.join(", "));
+        }
+        sandbox.sendChat(msg.who, content);
+    };
+    return handler;
+};
+exports.createCustomTableMessageHandler = createCustomTableMessageHandler;
+exports.default = exports.createCustomTableMessageHandler;
 
 
 /***/ }),
@@ -3614,9 +2300,11 @@ exports.createRankedTableConstructor = createRankedTableConstructor;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createRankedTableConstructor = exports.RankedTable = exports.createCustomTableConstructor = void 0;
+exports.createRankedTableConstructor = exports.RankedTable = exports.createCustomTableMessageHandler = exports.createCustomTableConstructor = void 0;
 var createCustomTableConstructor_1 = __nccwpck_require__(209);
 Object.defineProperty(exports, "createCustomTableConstructor", ({ enumerable: true, get: function () { return createCustomTableConstructor_1.createCustomTableConstructor; } }));
+var createCustomTableMessageHandler_1 = __nccwpck_require__(95);
+Object.defineProperty(exports, "createCustomTableMessageHandler", ({ enumerable: true, get: function () { return createCustomTableMessageHandler_1.createCustomTableMessageHandler; } }));
 const createRankedTableConstructor_1 = __nccwpck_require__(312);
 Object.defineProperty(exports, "createRankedTableConstructor", ({ enumerable: true, get: function () { return createRankedTableConstructor_1.createRankedTableConstructor; } }));
 exports.RankedTable = createRankedTableConstructor_1.createRankedTableConstructor();
@@ -3629,25 +2317,6 @@ exports.RankedTable = createRankedTableConstructor_1.createRankedTableConstructo
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3664,8 +2333,6 @@ const CustomTable_1 = __nccwpck_require__(544);
 const logger = Logger_1.getLogger({
     logLevel: "TRACE",
     logName: "Elfward",
-    // @ts-ignore
-    emissionFn: log,
 });
 // const tracer = (name: string) => {
 //     return (fn: Function) => {
@@ -3686,33 +2353,34 @@ Roll20Sandbox_1.createRoll20Sandbox({
     logger: logger.child({
         logName: "Roll20Sandbox",
     }),
-    // wrappers: {
-    //     on: tracer("on"),
-    //     sendChat: tracer("sendChat"),
-    // },
 }).then((sandbox) => __awaiter(void 0, void 0, void 0, function* () {
     // Once we're ready...
     sandbox.on("ready", () => __awaiter(void 0, void 0, void 0, function* () {
         logger.trace("on(ready) heard.");
         // make the sandbox functions 'global' so other libraries think they are
         // within the sandbox.
+        sandbox._promote();
+        // There's got to be a way to conditionally include these files in a build,
+        // but dynamic import() appears to modularize them so they don't have the global
+        // side effects we want. We'll probably want to simply concatenate them to the
+        // build instead. For now, you'll need them as separate scripts in roll20.
         if (!sandbox._isWithinSandbox()) {
-            sandbox._promote();
+            importLibs();
         }
-        // add the libraries we directly require.
-        // @ts-ignore
-        yield Promise.resolve().then(() => __importStar(__nccwpck_require__(574)));
-        // @ts-ignore
-        yield Promise.resolve().then(() => __importStar(__nccwpck_require__(75)));
         const { _registerCommand } = sandbox;
         const c = sandbox.Campaign();
-        logger.warn(c);
         const RankedTable = CustomTable_1.createRankedTableConstructor({
             sandbox,
             logger: logger.child({
                 logName: "RankedTable",
             }),
         });
+        const rankedTableMessageHandler = CustomTable_1.createCustomTableMessageHandler({
+            sandbox,
+            logger,
+            TableConstructor: RankedTable,
+        });
+        sandbox.on("chat:message", rankedTableMessageHandler);
         // Add a spell (using Table Export script)
         const importDCCSpell = _registerCommand(
         // !import-dcc-spell [data]
@@ -3765,7 +2433,7 @@ Roll20Sandbox_1.createRoll20Sandbox({
         });
         const manifestDCCSpell = _registerCommand("manifest", (name) => {
             logger.info(`Manifesting a spell! "${name}`);
-            sandbox.sendChat("", `!rt [[1t[DCC-SPELL-${name.toUpperCase()}-MANIFESTATION]]]`);
+            sandbox.sendChat("", `!rt <%%91%%><%%91%%>1t<%%91%%>DCC-SPELL-${name.toUpperCase()}-MANIFESTATION<%%93%%><%%93%%><%%93%%>`);
             return;
         });
         const dccSpellCommands = {
@@ -3797,6 +2465,9 @@ Roll20Sandbox_1.createRoll20Sandbox({
         testElfwardLocally(sandbox);
     }));
 }));
+const importLibs = () => {
+    "REPLACE WITH LIBS";
+};
 const testElfwardLocally = (sandbox) => {
     logger.info("Starting local Elfward tests.");
     sandbox._setAsGM("GM");
@@ -3826,32 +2497,51 @@ __nccwpck_require__(401);
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getLogger = void 0;
-const util_1 = __nccwpck_require__(604);
 const types_1 = __nccwpck_require__(321);
+// store log messages if we don't have a place to emit them yet.
+let logArchive;
+const fallbackEmissionFn = (...rest) => {
+    logArchive = logArchive || [];
+    logArchive.push(rest);
+};
+let defaultEmissionFnForEnvironment = fallbackEmissionFn;
+try {
+    defaultEmissionFnForEnvironment = log;
+}
+catch (err) {
+    try {
+        if (!defaultEmissionFnForEnvironment && console && (console === null || console === void 0 ? void 0 : console.log)) {
+            defaultEmissionFnForEnvironment = (...rest) => {
+                console.log(...rest);
+            };
+        }
+    }
+    catch (err) {
+        // OK....
+        true;
+    }
+}
 /**
  * Returns a basic logger.
  */
-const getLogger = ({ logLevel = "INFO", logName = "LOG", emissionFn, } = {}) => {
-    var _a;
-    let outFn = emissionFn ||
-        util_1.getTopLevelScope().log ||
-        ((_a = util_1.getTopLevelScope().console) === null || _a === void 0 ? void 0 : _a.log) ||
-        (() => { });
+const getLogger = ({ logLevel = "INFO", logName = "LOG", emissionFn = defaultEmissionFnForEnvironment, } = {}) => {
     const logLevelAsNumber = isNaN(Number(logLevel))
         ? types_1.LOG_LEVEL[logLevel]
         : Number(logLevel);
     const level = logLevelAsNumber === undefined ? types_1.LOG_LEVEL.INFO : logLevelAsNumber;
     const _emit = (msgLevel, ...rest) => {
         if (level <= types_1.LOG_LEVEL[msgLevel]) {
-            // @ts-ignore
-            return outFn(`${logName} [${msgLevel}]: ${rest}`);
+            return emissionFn(`${logName} [${msgLevel}]: ${rest}`);
         }
     };
     return {
         trace: (...rest) => {
+            var _a;
             // get a stack trace
             const err = new Error();
-            _emit("TRACE", ...rest, err.stack);
+            const stack = (_a = err.stack) === null || _a === void 0 ? void 0 : _a.split("\n")[2];
+            const cleanStack = stack || "";
+            _emit("TRACE", ...rest, cleanStack);
         },
         debug: (...rest) => _emit("DEBUG", ...rest),
         info: (...rest) => _emit("INFO", ...rest),
@@ -3863,11 +2553,11 @@ const getLogger = ({ logLevel = "INFO", logName = "LOG", emissionFn, } = {}) => 
             throw err;
         },
         child: (obj = {}) => {
-            _emit("TRACE", `child(${obj})`);
+            _emit("TRACE", `child(${JSON.stringify(obj)})`);
             return exports.getLogger({
                 logName: `${logName}::${obj.logName || "(child)"}`,
                 logLevel: obj.logLevel || logLevel,
-                emissionFn: obj.emissionFn || outFn,
+                emissionFn: obj.emissionFn || emissionFn,
             });
         },
     };
@@ -3962,8 +2652,21 @@ const createRoll20ObjectConstructor = ({ logger, idGenerator, pool, eventGenerat
     const shapeDefaults = shapes_1.getShapeDefaults({ idGenerator });
     const Roll20Object = (_a = class Roll20Object {
             constructor(type, obj = {}) {
-                logger === null || logger === void 0 ? void 0 : logger.trace(`Creating Roll20Object from: ${type}", ${JSON.stringify(obj)}".`);
+                logger === null || logger === void 0 ? void 0 : logger.trace(`constructor(${type}, ${JSON.stringify(obj)}).`);
                 this._obj = Roll20Object._createShape(type, obj);
+                if (pool) {
+                    const id = this._obj._id;
+                    if (pool[id]) {
+                        throw new Error(`Object with _id ${id} already present in pool!`);
+                    }
+                    else {
+                        pool[id] = this;
+                        logger === null || logger === void 0 ? void 0 : logger.debug(`New Roll20Object placed into pool. Total in pool: ${Object.keys(pool).length}`);
+                    }
+                }
+                const addEventName = `add:${type}`;
+                eventGenerator === null || eventGenerator === void 0 ? void 0 : eventGenerator(addEventName, this);
+                logger === null || logger === void 0 ? void 0 : logger.trace(`constructor(${type}, ${JSON.stringify(obj)}): ${JSON.stringify(this)}`);
             }
             get(key, cb) {
                 var _a, _b;
@@ -3973,10 +2676,10 @@ const createRoll20ObjectConstructor = ({ logger, idGenerator, pool, eventGenerat
                         throw new Error(`Callback required to get key "#{key}".`);
                     }
                 }
-                const value = this._obj[key];
-                logger === null || logger === void 0 ? void 0 : logger.trace(`get(${key}) found "${value}".`);
-                // TODO: allow a delay before callback is called.
-                //return (cb ? cb(value) : value) as S[K]
+                const value = cb
+                    ? cb(this._obj[key])
+                    : this._obj[key];
+                logger === null || logger === void 0 ? void 0 : logger.trace(`get(${key}) :${JSON.stringify(value)}`);
                 return value;
             }
             get id() {
@@ -3995,7 +2698,7 @@ const createRoll20ObjectConstructor = ({ logger, idGenerator, pool, eventGenerat
                         // @ts-ignore
                         this._obj[key] =
                             allChanges[key];
-                        eventGenerator(`change:${this._obj._type}:${key}`);
+                        eventGenerator === null || eventGenerator === void 0 ? void 0 : eventGenerator(`change:${this._obj._type}:${key}`);
                     }
                 });
             }
@@ -4018,7 +2721,7 @@ const createRoll20ObjectConstructor = ({ logger, idGenerator, pool, eventGenerat
                         this._obj[key] = changes[key];
                     }
                 });
-                eventGenerator("sheetWorkerCompleted");
+                eventGenerator === null || eventGenerator === void 0 ? void 0 : eventGenerator("sheetWorkerCompleted");
             }
             remove() {
                 logger === null || logger === void 0 ? void 0 : logger.trace(`remove()`);
@@ -4027,8 +2730,10 @@ const createRoll20ObjectConstructor = ({ logger, idGenerator, pool, eventGenerat
                         logger === null || logger === void 0 ? void 0 : logger.warn(`Can't remove obj; id ${this._obj._id} not found in pool.`);
                     }
                     delete pool[this.id];
+                    logger === null || logger === void 0 ? void 0 : logger.debug(`Roll20Object removed from pool. Total in pool: ${Object.keys(pool).length}`);
                 }
-                eventGenerator(`remove:${this._obj._type}`);
+                eventGenerator === null || eventGenerator === void 0 ? void 0 : eventGenerator(`remove:${this._obj._type}`);
+                logger === null || logger === void 0 ? void 0 : logger.trace(`remove(): ${JSON.stringify(this)}`);
                 return this;
             }
         },
@@ -4152,17 +2857,14 @@ var __rest = (this && this.__rest) || function (s, e) {
         }
     return t;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createRoll20Sandbox = void 0;
-__nccwpck_require__(79);
 const Roll20Object_1 = __nccwpck_require__(333);
-const getTopLevelScope_1 = __importDefault(__nccwpck_require__(992));
+const util_1 = __nccwpck_require__(604);
+__nccwpck_require__(79);
 const createRoll20Sandbox = ({ campaign, state, logger, pool = {}, idGenerator, 
 // @ts-ignore
-scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, void 0, void 0, function* () {
+scope = util_1.getTopLevelScope(), wrappers = {}, }) => __awaiter(void 0, void 0, void 0, function* () {
     // private variables for things handled behind the scenes
     // by the sandbox.
     const _private = {
@@ -4172,6 +2874,12 @@ scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, voi
         _handlers: {},
         _GM: undefined,
         _withinSandbox: true,
+        _readyTimeout: undefined,
+        _disposed: true,
+        // TODO: z index management
+        _zindexes: {},
+        // TODO: selection management
+        _selection: [],
     };
     const _fireEvent = (eventName, ...rest) => {
         logger === null || logger === void 0 ? void 0 : logger.trace(`_fireEvent('${eventName}').`, ...rest);
@@ -4195,6 +2903,10 @@ scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, voi
         const subEvents = eventName.split(":");
         while (subEvents.length) {
             const n = subEvents.join(":");
+            if (n === "add" || n === "remove" || "change") {
+                subEvents.pop();
+                return;
+            }
             logger === null || logger === void 0 ? void 0 : logger.info(`_fireEvent: Firing event '${n}'.`, ...rest);
             const handlers = _private._handlers[n] || [];
             handlers.forEach((handler) => handler(...rest));
@@ -4206,64 +2918,74 @@ scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, voi
             logName: "Roll20Object",
         }),
         idGenerator,
-        pool,
         eventGenerator: _fireEvent,
     });
+    const getAllObjs = () => {
+        logger === null || logger === void 0 ? void 0 : logger.trace(`getAllObjs()`);
+        return Object.values(_private._pool);
+    };
     const filterObjs = (cb) => {
         logger === null || logger === void 0 ? void 0 : logger.trace(`filterObjs()`);
         return Object.keys(_private._pool)
             .map((key) => _private._pool[key])
             .filter(cb);
     };
+    const findObjs = (obj, { caseInsensitive = false } = {}) => {
+        logger === null || logger === void 0 ? void 0 : logger.trace(`findObjs(${JSON.stringify(obj)}, { caseInsensitive: ${caseInsensitive} })`);
+        const found = filterObjs((testObj) => {
+            let found = true;
+            Object.keys(testObj).forEach((key) => {
+                const testValue = testObj[key];
+                // @ts-ignore
+                const objValue = obj[key];
+                if (found && caseInsensitive) {
+                    if (typeof objValue === "string" ||
+                        typeof testValue === "string") {
+                        if (testValue.toString().toLowerCase() !=
+                            objValue.toString().toLowerCase()) {
+                            found = false;
+                        }
+                    }
+                }
+                // @ts-ignore
+                if (found && testObj[key] != obj[key]) {
+                    found = false;
+                }
+            });
+            return found;
+        });
+        logger === null || logger === void 0 ? void 0 : logger.trace(`findObjs(${JSON.stringify(obj)}, { caseInsensitive: ${caseInsensitive} }): ${found}`);
+        return found;
+    };
     const sandbox = {
         _: undefined,
-        state: state || getTopLevelScope_1.default().state || {},
+        state: state || util_1.getTopLevelScope().state || {},
         Campaign: () => {
+            logger === null || logger === void 0 ? void 0 : logger.trace(`Campaign()`);
             if (!_private._campaign) {
                 const cmp = campaign ||
                     new Roll20Object("campaign");
                 _private._campaign = cmp;
                 _private._pool[cmp.id] = cmp;
             }
+            logger === null || logger === void 0 ? void 0 : logger.trace(`Campaign(): ${_private._campaign}`);
             return _private._campaign;
         },
         createObj: (_type, obj) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`createObj(${_type}, ${JSON.stringify(obj)})`);
             const r = new Roll20Object(_type, obj);
             _private._pool[r.id] = r;
+            logger === null || logger === void 0 ? void 0 : logger.trace(`createObj(${_type}, ${JSON.stringify(obj)}): ${JSON.stringify(r)}`);
             return r;
         },
         filterObjs,
-        findObjs: (obj, { caseInsensitive = false } = {}) => {
-            logger === null || logger === void 0 ? void 0 : logger.trace(`findObjs(${JSON.stringify(obj)}, { caseInsensitive: ${caseInsensitive} })`);
-            return filterObjs((testObj) => {
-                let found = true;
-                Object.keys(testObj).forEach((key) => {
-                    const testValue = testObj[key];
-                    const objValue = obj[key];
-                    if (found && caseInsensitive) {
-                        if (typeof objValue === "string" ||
-                            typeof testValue === "string") {
-                            if (testValue.toString().toLowerCase() !=
-                                objValue.toString().toLowerCase()) {
-                                found = false;
-                            }
-                        }
-                    }
-                    if (found && testObj[key] != obj[key]) {
-                        found = false;
-                    }
-                });
-                return found;
-            });
-        },
+        findObjs,
         getObj: (type, id) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`getObj(${type}, ${id})`);
-            return _private._pool[id];
-        },
-        getAllObjs: () => {
-            logger === null || logger === void 0 ? void 0 : logger.trace(`getAllObjs()`);
-            return Object.keys(_private._pool).map((key) => _private._pool[key]);
+            const obj = _private._pool[id];
+            // TODO: possibly add to _zindex;
+            logger === null || logger === void 0 ? void 0 : logger.trace(`getObj(${type}, ${id}): ${JSON.stringify(obj)}`);
+            return obj;
         },
         getAttrByName: (id, name, curOrMax = "current") => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`getAttrByName(${id}, ${name}, ${curOrMax})`);
@@ -4275,7 +2997,12 @@ scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, voi
             }
             return char.get(`${name}_${curOrMax}`);
         },
-        log: (...rest) => { var _a; return (_a = (logger ? logger : console ? console : null)) === null || _a === void 0 ? void 0 : _a.info(...rest); },
+        log: (...rest) => {
+            if (!logger) {
+                throw new Error("Please just use a logger.");
+            }
+            logger.info(...rest);
+        },
         on: (eventName, handler) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`on(${eventName})`);
             const subEvents = eventName.split(":");
@@ -4365,14 +3092,15 @@ scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, voi
          * Mocked version of toBack(), which does nothing.
          */
         toBack: (obj) => {
-            // TODO: mock zindex
             logger === null || logger === void 0 ? void 0 : logger.trace(`toBack(${JSON.stringify(obj)})`);
+            // TODO: move obj to lowest _zindex.
         },
         /**
          * Mocked version of toFront(), which does nothing.
          */
         toFront: (obj) => {
             logger === null || logger === void 0 ? void 0 : logger.trace(`toFront(${JSON.stringify(obj)})`);
+            // TODO: move obj to highest _zindex.
         },
     };
     // We look at the environment. If the functions defined in the sandbox object
@@ -4409,39 +3137,64 @@ scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, voi
                 logger === null || logger === void 0 ? void 0 : logger.info(`Using mocked "${key}": ${(_a = sandbox[key]) === null || _a === void 0 ? void 0 : _a.toString()}.`);
             }
         }
-        // if ((wrappers as Record<string, any>)[key]) {
-        //     logger?.info(`Custom wrapper found for "${key}". Applying.`);
-        //     realSandbox[key] = (wrappers as Record<string, any>)[key](
-        //         realSandbox[key]
-        //     );
-        // }
     })));
+    // const _applyWrappers = (wrappers: Wrappers = {}) => {
+    //     logger?.trace(`_applyWrappers(${wrappers})`);
+    //     Object.keys(wrappers).forEach((key) => {
+    //         _wrap(key as keyof SandboxAPI, wrappers[key]);
+    //     });
+    //     _wrap("getObj", () => realSandbox.getObj);
+    // };
+    // const _wrap = <T extends keyof SandboxAPI>(
+    //     key: T,
+    //     wrapper: (fn: SandboxAPI[T]) => SandboxAPI[T]
+    // ) => {
+    //     logger?.trace(`_wrap(${key}, ${wrapper.toString()})`);
+    //     const sandboxFn = realSandbox[key];
+    //     if (sandboxFn && typeof sandboxFn === "function") {
+    //         logger?.info(
+    //             `Wrapped sandbox "${key}" ("${realSandbox[key]}") with "${wrapper}."`
+    //         );
+    //         realSandbox[key] = wrapper(realSandbox[key]);
+    //     } else {
+    //         logger?.warn(`Cannot wrap sandbox "${key}": not a function.`);
+    //     }
+    // };
+    // wrappers && _applyWrappers(wrappers);
     const _registerCommand = (name, handler) => {
+        logger === null || logger === void 0 ? void 0 : logger.trace(`_registerCommand(${name}, ${handler.toString()})`);
         logger === null || logger === void 0 ? void 0 : logger.info("registering command " + name);
+        const cmdLogger = logger === null || logger === void 0 ? void 0 : logger.child({
+            logName: name,
+            logLevel: "TRACE",
+        });
         realSandbox.on("chat:message", (msg) => {
+            cmdLogger === null || cmdLogger === void 0 ? void 0 : cmdLogger.trace(`(${JSON.stringify(msg)})`);
             if (msg.type !== "api") {
+                cmdLogger === null || cmdLogger === void 0 ? void 0 : cmdLogger.debug(`Ignoring non-api message.`);
                 return;
             }
-            logger === null || logger === void 0 ? void 0 : logger.info(msg.content);
             if (msg.content.indexOf(name) !== 1) {
+                cmdLogger === null || cmdLogger === void 0 ? void 0 : cmdLogger.debug(`Ignoring api message: not for this handler.`);
                 return;
             }
-            logger === null || logger === void 0 ? void 0 : logger.info("invoked" + name);
-            // @ts-ignore
             const [command, ...args] = msg.content.splitArgs();
-            logger === null || logger === void 0 ? void 0 : logger.info("split up command" + args.length);
+            cmdLogger === null || cmdLogger === void 0 ? void 0 : cmdLogger.info(`Command invoked: ${command} (${args})`);
             handler(...args);
         });
     };
     const _isWithinSandbox = () => {
-        return _private._withinSandbox;
+        logger === null || logger === void 0 ? void 0 : logger.trace(`_isWithinSandbox()`);
+        const r = _private._withinSandbox;
+        logger === null || logger === void 0 ? void 0 : logger.trace(`_isWithinSandbox(): ${r}`);
+        return r;
     };
     if (!_isWithinSandbox()) {
         /**
          * If, after a full second, we're not within the real Roll20 sandbox, fire a ready event.
          */
         // @ts-ignore
-        setTimeout(() => {
+        _private._readyTimeout = setTimeout(() => {
             if (_isWithinSandbox()) {
                 logger === null || logger === void 0 ? void 0 : logger.info(`Within real sandbox, so ignoring need to fire ready event.`);
                 if (_private._readyEventEmitted) {
@@ -4459,23 +3212,43 @@ scope = getTopLevelScope_1.default(), wrappers = {}, }) => __awaiter(void 0, voi
     }
     const _promote = (keys, 
     // @ts-ignore
-    scope = getTopLevelScope_1.default()) => {
-        logger === null || logger === void 0 ? void 0 : logger.info("_PROMOTE");
+    scope = util_1.getTopLevelScope()) => {
+        logger === null || logger === void 0 ? void 0 : logger.trace("_promote(${keys}, ${scope})");
         let promotionKeys = keys || Object.keys(realSandbox);
         logger === null || logger === void 0 ? void 0 : logger.info(`_PROMOTING: ${promotionKeys}`);
         promotionKeys.forEach((key) => {
-            logger === null || logger === void 0 ? void 0 : logger.info(`${key}, ${realSandbox[key] === scope[key]}`);
-            scope[key] = realSandbox[key];
+            if (realSandbox[key] !== scope[key])
+                scope[key] = realSandbox[key];
+            logger === null || logger === void 0 ? void 0 : logger.info(`Promoted sandbox '${key}' to new scope.`);
         });
         return scope;
     };
     const _setAsGM = (playerId) => {
+        logger === null || logger === void 0 ? void 0 : logger.trace(`_setAsGM(${playerId})`);
         _private._GM = playerId;
+    };
+    const _dispose = () => {
+        logger === null || logger === void 0 ? void 0 : logger.trace(`_dispose()`);
+        if (!_private._disposed) {
+            logger === null || logger === void 0 ? void 0 : logger.fatal(`Sandbox already disposed of.`);
+        }
+        clearTimeout(_private._readyTimeout);
+        Object.keys(pool).forEach((key) => {
+            // @ts-ignore
+            const obj = pool[key];
+            obj.remove();
+        });
+        _private._disposed = true;
+    };
+    const _select = (selected) => {
+        // TODO: implement selection
     };
     return Object.assign(Object.assign({}, realSandbox), { _fireEvent,
         _registerCommand,
-        _isWithinSandbox, _global: getTopLevelScope_1.default(), _promote,
-        _setAsGM });
+        _isWithinSandbox, _global: util_1.getTopLevelScope(), _promote,
+        _setAsGM,
+        _dispose,
+        _select });
 });
 exports.createRoll20Sandbox = createRoll20Sandbox;
 

@@ -6,6 +6,7 @@ export {
     PlayerId,
     Id,
     IdGenerator,
+    EventGenerator,
 } from "./types";
 export { getShapeDefaults } from "./shapes";
 

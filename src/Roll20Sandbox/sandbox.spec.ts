@@ -1,71 +1,56 @@
 import { expect } from "chai";
 import "mocha";
 
-import { Id, Roll20ObjectType } from "../Roll20Object";
-import { createRoll20Sandbox } from "./sandbox";
-import { getLogger } from "../Logger";
+import {
+    Id,
+    IdGenerator,
+    Roll20ObjectInterface,
+    Roll20ObjectShapeTypeMap,
+    Roll20ObjectType,
+} from "../Roll20Object";
+import { getLogger, Logger } from "../Logger";
 
-const idGenerator = () => Math.random().toString() as Id;
-
-var testNumber = 0;
-const logger = getLogger();
-
-const events = {} as Record<string, any>;
+import { createRoll20Sandbox, Sandbox } from ".";
 
 describe("createRoll20Sandbox", async () => {
-    it(`[${++testNumber}] should return an api object`, async () => {
-        const sandbox = await createRoll20Sandbox({
+    let testNumber = 0;
+    let logger: Logger;
+    let sandbox: Sandbox;
+    let nextId = 0;
+    let idGenerator: IdGenerator = () => (++nextId).toString() as Id;
+    before(() => {
+        logger = getLogger({
+            logName: "Roll20Sandbox Tests",
+            logLevel: "INFO",
+        });
+    });
+    beforeEach(async () => {
+        nextId = 0;
+        sandbox = await createRoll20Sandbox({
             logger: logger.child({
                 logName: testNumber.toString(),
             }),
             idGenerator,
         });
-
-        expect(!!sandbox).to.equal(true);
-
+    });
+    afterEach(() => {
         sandbox._dispose();
     });
-
-    it(`[${++testNumber}] should support wrapping`, async () => {
-        const sandbox = await createRoll20Sandbox({
-            logger,
-            idGenerator,
-            wrappers: {
-                createObj: (createFn: Function) => {
-                    logger.trace(`createObj()[WRAPPER]`);
-                    return (type: Roll20ObjectType, obj: any) => {
-                        logger.info(
-                            `Attempting createObj(${type}, ${JSON.stringify(
-                                obj
-                            )}).`
-                        );
-                        let newObj;
-                        try {
-                            newObj = createFn(type, obj);
-                        } catch (err) {
-                            logger.info(
-                                `Failed to createObj: ${err.toString()}`
-                            );
-                            throw err;
-                        }
-                        logger.info(
-                            `createObj(${type}, ${JSON.stringify(
-                                obj
-                            )}) returned: ${JSON.stringify(newObj)}.`
-                        );
-                        return newObj;
-                    };
-                },
-            },
-        });
-
+    after(() => {});
+    it(`[${++testNumber}] should return a sandbox object`, async () => {
         expect(!!sandbox).to.equal(true);
+        expect(sandbox.state).to.exist;
+    });
 
-        const myCustFX = sandbox.createObj("custfx", { definition: "foo" });
+    it(`[${++testNumber}] should allow Roll20Object management`, async () => {
+        const macros = [] as Roll20ObjectInterface<"macro">[];
+        // add 10 items
+        for (var i = 0; i < 10; i++) {
+            macros.push(sandbox.createObj("macro", {}));
+        }
 
-        expect(myCustFX.get("definition") === "foo").to.equal(true);
-        myCustFX.remove();
-
-        sandbox._dispose();
+        // since we're incrementing ids by 1, we can use it to check what we'ce got.
+        expect(macros[0].id).to.equal("1");
+        expect(macros[9].id).to.equal("10");
     });
 });

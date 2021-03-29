@@ -1,13 +1,3 @@
-import "../../lib/splitArgs";
-
-import {
-    ChatMessage,
-    Coord2D,
-    FxBetweenNames,
-    FxNames,
-    Roll20EventName,
-} from "./types";
-
 import { Logger } from "../Logger";
 import {
     Roll20ObjectInterface,
@@ -17,10 +7,23 @@ import {
     PlayerId,
     Roll20ObjectType,
     Roll20ObjectShapeTypeMap,
-    Roll20Object,
 } from "../Roll20Object";
 
-import getTopLevelScope from "../util/getTopLevelScope";
+import { getTopLevelScope } from "../util";
+
+import "../../lib/splitArgs";
+
+import {
+    ChatMessage,
+    Coord2D,
+    FxBetweenNames,
+    FxNames,
+    Roll20EventName,
+    Roll20ObjectPool,
+} from "./types";
+
+// TODO: type wrappers
+type Wrappers = Record<string, (fn: Function) => Function>;
 
 export const createRoll20Sandbox = async ({
     campaign,
@@ -36,20 +39,23 @@ export const createRoll20Sandbox = async ({
     state?: Record<string, any>;
     logger?: Logger;
     idGenerator: IdGenerator;
-    pool?: Record<string, any>;
+    pool?: Roll20ObjectPool;
     scope?: Record<string, any>;
-    wrappers?: Record<string, Function>;
+    wrappers?: Wrappers;
 }) => {
     // private variables for things handled behind the scenes
     // by the sandbox.
     const _private: {
         _campaign?: Roll20ObjectInterface<"campaign">;
-        _pool: Record<string, any>;
+        _pool: Roll20ObjectPool;
         _readyEventEmitted: boolean;
         _handlers: Record<Roll20EventName, Function[]>;
         _GM?: PlayerId;
         _withinSandbox: boolean;
         _readyTimeout?: number;
+        _disposed: boolean;
+        _zindexes: Record<number, Roll20ObjectInterface<"graphic">>;
+        _selection: Roll20ObjectInterface[];
     } = {
         _campaign: undefined,
         _pool: pool,
@@ -58,6 +64,11 @@ export const createRoll20Sandbox = async ({
         _GM: undefined,
         _withinSandbox: true,
         _readyTimeout: undefined,
+        _disposed: true,
+        // TODO: z index management
+        _zindexes: {} as Record<number, Roll20ObjectInterface<"graphic">>,
+        // TODO: selection management
+        _selection: [],
     };
 
     const _fireEvent = (eventName: Roll20EventName, ...rest: any) => {
@@ -82,6 +93,10 @@ export const createRoll20Sandbox = async ({
         const subEvents = eventName.split(":");
         while (subEvents.length) {
             const n = subEvents.join(":");
+            if (n === "add" || n === "remove" || "change") {
+                subEvents.pop();
+                return;
+            }
             logger?.info(`_fireEvent: Firing event '${n}'.`, ...rest);
             const handlers = _private._handlers[n as Roll20EventName] || [];
             handlers.forEach((handler) => handler(...rest));
@@ -94,15 +109,85 @@ export const createRoll20Sandbox = async ({
             logName: "Roll20Object",
         }),
         idGenerator,
-        pool,
         eventGenerator: _fireEvent,
     });
 
+    const getAllObjs = () => {
+        logger?.trace(`getAllObjs()`);
+        return Object.values(_private._pool) as Roll20ObjectInterface[];
+    };
+
     const filterObjs = (cb: (obj: any) => boolean) => {
         logger?.trace(`filterObjs()`);
+
         return Object.keys(_private._pool)
             .map((key) => _private._pool[key])
-            .filter(cb);
+            .filter(cb) as Roll20ObjectInterface[];
+    };
+
+    type X<T extends Roll20ObjectType> = {
+        _type: T;
+    } & {
+        [K in keyof Roll20ObjectShapeTypeMap[T]]: Roll20ObjectShapeTypeMap[T][K];
+    };
+
+    type FindObjs = {
+        <T extends Roll20ObjectType = Roll20ObjectType>(
+            obj: X<T>,
+            options?: {
+                caseInsensitive?: boolean;
+            }
+        ): Roll20ObjectInterface<T>[];
+        <T extends Roll20ObjectType = Roll20ObjectType>(
+            obj: Partial<Values<Roll20ObjectShapeTypeMap>>,
+            options?: {
+                caseInsensitive?: boolean;
+            }
+        ): Roll20ObjectInterface<T>[];
+    };
+
+    const findObjs: FindObjs = <T extends Roll20ObjectType = Roll20ObjectType>(
+        obj: Partial<Values<Roll20ObjectShapeTypeMap>> | X<T>,
+        { caseInsensitive = false }: { caseInsensitive?: boolean } = {}
+    ) => {
+        logger?.trace(
+            `findObjs(${JSON.stringify(
+                obj
+            )}, { caseInsensitive: ${caseInsensitive} })`
+        );
+        const found = filterObjs((testObj: any) => {
+            let found = true;
+            Object.keys(testObj).forEach((key) => {
+                const testValue = testObj[key];
+                // @ts-ignore
+                const objValue = obj[key];
+
+                if (found && caseInsensitive) {
+                    if (
+                        typeof objValue === "string" ||
+                        typeof testValue === "string"
+                    ) {
+                        if (
+                            testValue.toString().toLowerCase() !=
+                            objValue.toString().toLowerCase()
+                        ) {
+                            found = false;
+                        }
+                    }
+                }
+                // @ts-ignore
+                if (found && testObj[key] != obj[key]) {
+                    found = false;
+                }
+            });
+            return found;
+        });
+        logger?.trace(
+            `findObjs(${JSON.stringify(
+                obj
+            )}, { caseInsensitive: ${caseInsensitive} }): ${found}`
+        );
+        return found as Roll20ObjectInterface<T>[];
     };
 
     const sandbox = {
@@ -134,61 +219,18 @@ export const createRoll20Sandbox = async ({
             return r;
         },
         filterObjs,
-        findObjs: (
-            obj: any,
-            { caseInsensitive = false }: { caseInsensitive?: boolean } = {}
-        ) => {
-            logger?.trace(
-                `findObjs(${JSON.stringify(
-                    obj
-                )}, { caseInsensitive: ${caseInsensitive} })`
-            );
-            const found = filterObjs((testObj: any) => {
-                let found = true;
-                Object.keys(testObj).forEach((key) => {
-                    const testValue = testObj[key];
-                    const objValue = obj[key];
-
-                    if (found && caseInsensitive) {
-                        if (
-                            typeof objValue === "string" ||
-                            typeof testValue === "string"
-                        ) {
-                            if (
-                                testValue.toString().toLowerCase() !=
-                                objValue.toString().toLowerCase()
-                            ) {
-                                found = false;
-                            }
-                        }
-                    }
-                    if (found && testObj[key] != obj[key]) {
-                        found = false;
-                    }
-                });
-                return found;
-            });
-            logger?.trace(
-                `findObjs(${JSON.stringify(
-                    obj
-                )}, { caseInsensitive: ${caseInsensitive} }): ${found}`
-            );
-            return found;
-        },
+        findObjs,
         getObj: <T extends Roll20ObjectType>(
             type: Roll20ObjectShapeTypeMap[T],
             id: Id
-        ): Roll20ObjectInterface<T> => {
+        ): Roll20ObjectInterface<T> | undefined => {
             logger?.trace(`getObj(${type}, ${id})`);
             const obj = _private._pool[id];
+
+            // TODO: possibly add to _zindex;
+
             logger?.trace(`getObj(${type}, ${id}): ${JSON.stringify(obj)}`);
             return obj;
-        },
-        getAllObjs: () => {
-            logger?.trace(`getAllObjs()`);
-            return Object.keys(_private._pool).map(
-                (key) => _private._pool[key]
-            );
         },
         getAttrByName: (
             id: string,
@@ -340,14 +382,17 @@ export const createRoll20Sandbox = async ({
          * Mocked version of toBack(), which does nothing.
          */
         toBack: (obj: Roll20ObjectInterface) => {
-            // TODO: mock zindex
             logger?.trace(`toBack(${JSON.stringify(obj)})`);
+
+            // TODO: move obj to lowest _zindex.
         },
         /**
          * Mocked version of toFront(), which does nothing.
          */
         toFront: (obj: InstanceType<typeof Roll20Object>) => {
             logger?.trace(`toFront(${JSON.stringify(obj)})`);
+
+            // TODO: move obj to highest _zindex.
         },
     } as const;
 
@@ -394,39 +439,65 @@ export const createRoll20Sandbox = async ({
                     );
                 }
             }
-            // if ((wrappers as Record<string, any>)[key]) {
-            //     logger?.info(`Custom wrapper found for "${key}". Applying.`);
-            //     realSandbox[key] = (wrappers as Record<string, any>)[key](
-            //         realSandbox[key]
-            //     );
-            // }
         })
     );
 
+    // const _applyWrappers = (wrappers: Wrappers = {}) => {
+    //     logger?.trace(`_applyWrappers(${wrappers})`);
+    //     Object.keys(wrappers).forEach((key) => {
+    //         _wrap(key as keyof SandboxAPI, wrappers[key]);
+    //     });
+    //     _wrap("getObj", () => realSandbox.getObj);
+    // };
+
+    // const _wrap = <T extends keyof SandboxAPI>(
+    //     key: T,
+    //     wrapper: (fn: SandboxAPI[T]) => SandboxAPI[T]
+    // ) => {
+    //     logger?.trace(`_wrap(${key}, ${wrapper.toString()})`);
+    //     const sandboxFn = realSandbox[key];
+    //     if (sandboxFn && typeof sandboxFn === "function") {
+    //         logger?.info(
+    //             `Wrapped sandbox "${key}" ("${realSandbox[key]}") with "${wrapper}."`
+    //         );
+    //         realSandbox[key] = wrapper(realSandbox[key]);
+    //     } else {
+    //         logger?.warn(`Cannot wrap sandbox "${key}": not a function.`);
+    //     }
+    // };
+    // wrappers && _applyWrappers(wrappers);
+
     const _registerCommand = (name: string, handler: Function) => {
+        logger?.trace(`_registerCommand(${name}, ${handler.toString()})`);
         logger?.info("registering command " + name);
+
+        const cmdLogger = logger?.child({
+            logName: name,
+            logLevel: "TRACE",
+        });
         realSandbox.on("chat:message", (msg: ChatMessage) => {
+            cmdLogger?.trace(`(${JSON.stringify(msg)})`);
             if (msg.type !== "api") {
+                cmdLogger?.debug(`Ignoring non-api message.`);
                 return;
             }
-            logger?.info(msg.content);
             if (msg.content.indexOf(name) !== 1) {
+                cmdLogger?.debug(`Ignoring api message: not for this handler.`);
                 return;
             }
 
-            logger?.info("invoked" + name);
-
-            // @ts-ignore
             const [command, ...args] = msg.content.splitArgs();
-
-            logger?.info("split up command" + args.length);
+            cmdLogger?.info(`Command invoked: ${command} (${args})`);
 
             handler(...args);
         });
     };
 
     const _isWithinSandbox = () => {
-        return _private._withinSandbox;
+        logger?.trace(`_isWithinSandbox()`);
+        const r = _private._withinSandbox;
+        logger?.trace(`_isWithinSandbox(): ${r}`);
+        return r;
     };
 
     if (!_isWithinSandbox()) {
@@ -467,8 +538,8 @@ export const createRoll20Sandbox = async ({
             keys || (Object.keys(realSandbox) as (keyof SandboxAPI)[]);
         logger?.info(`_PROMOTING: ${promotionKeys}`);
         promotionKeys.forEach((key) => {
-            logger?.info(`${key}, ${realSandbox[key] === scope[key]}`);
-            scope[key] = realSandbox[key];
+            if (realSandbox[key] !== scope[key]) scope[key] = realSandbox[key];
+            logger?.info(`Promoted sandbox '${key}' to new scope.`);
         });
         return scope;
     };
@@ -480,7 +551,20 @@ export const createRoll20Sandbox = async ({
 
     const _dispose = () => {
         logger?.trace(`_dispose()`);
+        if (!_private._disposed) {
+            logger?.fatal(`Sandbox already disposed of.`);
+        }
         clearTimeout(_private._readyTimeout);
+        Object.keys(pool).forEach((key) => {
+            // @ts-ignore
+            const obj: Roll20ObjectInterface = pool[key];
+            obj.remove();
+        });
+        _private._disposed = true;
+    };
+
+    const _select = (selected: Roll20ObjectInterface[]) => {
+        // TODO: implement selection
     };
 
     return {
@@ -492,6 +576,8 @@ export const createRoll20Sandbox = async ({
         _promote,
         _setAsGM,
         _dispose,
+        _select,
+        //_applyWrappers,
     } as Immutable<typeof realSandbox> & {
         _fireEvent: typeof _fireEvent;
         _registerCommand: typeof _registerCommand;
@@ -500,6 +586,8 @@ export const createRoll20Sandbox = async ({
         _promote: typeof _promote;
         _setAsGM: typeof _setAsGM;
         _dispose: typeof _dispose;
+        _select: typeof _select;
+        //_applyWrappers: typeof _applyWrappers;
     };
 };
 

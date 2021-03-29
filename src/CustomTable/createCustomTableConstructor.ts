@@ -27,8 +27,21 @@ export const createCustomTableConstructor = <T, K>({
     sandbox?: Sandbox;
     logger?: Logger;
 }) => {
+    const _instances = {} as Record<string, CustomTableInterface<T>>;
     const CustomTable = class CustomTable implements CustomTableInterface<T> {
         private _rollabletableid: Id;
+
+        static getTable(
+            table: Roll20ObjectInterface<"rollabletable">,
+            options: any = {}
+        ) {
+            logger?.trace(`getTable(${table.id}, ${options})`);
+            const key = `${table.get("name")}_${JSON.stringify(options)}`;
+            if (!_instances[key]) {
+                _instances[key] = new CustomTable(table, options);
+            }
+            return _instances[key];
+        }
 
         /**
          * @param table - a rollabletable object 'backing' this table.

@@ -26,7 +26,7 @@
         "ts-node": "^9.1.1"
     },
     "scripts": {
-        "build::js": "ncc build src/Elfward/index.ts -o build && bin/alter_ncc_output.sh",
+        "build::js": "USE_DYNAMIC_IMPORTS=0 ncc build src/Elfward/index.ts -o build && bin/alter_ncc_output.sh",
         "test": "TS_NODE_FILES=true mocha -r ts-node/register src/**/*.spec.ts",
         "build::data": "bin/build_data.sh",
         "build": "npm run build::js && npm run build::data",

@@ -66,7 +66,7 @@ export const createRoll20ObjectConstructor = ({
 }: {
     logger?: Logger;
     idGenerator: IdGenerator;
-    pool?: Record<string, any>;
+    pool?: Record<Id, any>;
     eventGenerator?: EventGenerator;
 }) => {
     const shapeDefaults = getShapeDefaults({ idGenerator });

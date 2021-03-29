@@ -1,13 +1,14 @@
 import { createRoll20Sandbox, Sandbox } from "../Roll20Sandbox";
 import { Id, Roll20ObjectInterface } from "../Roll20Object";
 import { getLogger } from "../Logger";
-import { createRankedTableConstructor } from "../CustomTable";
+import {
+    createCustomTableMessageHandler,
+    createRankedTableConstructor,
+} from "../CustomTable";
 
 const logger = getLogger({
     logLevel: "TRACE",
     logName: "Elfward",
-    // @ts-ignore
-    emissionFn: log,
 });
 
 // const tracer = (name: string) => {
@@ -31,30 +32,26 @@ createRoll20Sandbox({
     logger: logger.child({
         logName: "Roll20Sandbox",
     }),
-    // wrappers: {
-    //     on: tracer("on"),
-    //     sendChat: tracer("sendChat"),
-    // },
 }).then(async (sandbox) => {
     // Once we're ready...
     sandbox.on("ready", async () => {
         logger.trace("on(ready) heard.");
         // make the sandbox functions 'global' so other libraries think they are
         // within the sandbox.
+        sandbox._promote();
+
+        // There's got to be a way to conditionally include these files in a build,
+        // but dynamic import() appears to modularize them so they don't have the global
+        // side effects we want. We'll probably want to simply concatenate them to the
+        // build instead. For now, you'll need them as separate scripts in roll20.
+
         if (!sandbox._isWithinSandbox()) {
-            sandbox._promote();
+            importLibs();
         }
 
-        // add the libraries we directly require.
-
-        // @ts-ignore
-        await import("../../lib/tableExport");
-        // @ts-ignore
-        await import("../../lib/recursiveTable");
         const { _registerCommand } = sandbox;
 
         const c = sandbox.Campaign();
-        logger.warn(c);
 
         const RankedTable = createRankedTableConstructor({
             sandbox,
@@ -62,6 +59,13 @@ createRoll20Sandbox({
                 logName: "RankedTable",
             }),
         });
+
+        const rankedTableMessageHandler = createCustomTableMessageHandler({
+            sandbox,
+            logger,
+            TableConstructor: RankedTable,
+        });
+        sandbox.on("chat:message", rankedTableMessageHandler);
 
         // Add a spell (using Table Export script)
         const importDCCSpell = _registerCommand(
@@ -140,7 +144,7 @@ createRoll20Sandbox({
 
                 sandbox.sendChat(
                     "",
-                    `!rt [[1t[DCC-SPELL-${name.toUpperCase()}-MANIFESTATION]]]`
+                    `!rt <%%91%%><%%91%%>1t<%%91%%>DCC-SPELL-${name.toUpperCase()}-MANIFESTATION<%%93%%><%%93%%><%%93%%>`
                 );
                 return;
             }
@@ -185,6 +189,10 @@ createRoll20Sandbox({
         testElfwardLocally(sandbox);
     });
 });
+
+const importLibs = () => {
+    "REPLACE WITH LIBS";
+};
 
 const testElfwardLocally = (sandbox: Sandbox) => {
     logger.info("Starting local Elfward tests.");

@@ -1,5 +1,9 @@
-import { Roll20ObjectShapeTypeMap } from "../Roll20Object";
-import { Id, PlayerId, Roll20ObjectType } from "../Roll20Object/types";
+import {
+    Roll20ObjectShapeTypeMap,
+    Id,
+    PlayerId,
+    Roll20ObjectType,
+} from "../Roll20Object";
 
 export type Roll20ChangeSubEvents = {
     [K in Roll20ObjectType]: Permuted<
@@ -81,3 +85,5 @@ export type Coord2D = {
     x: number;
     y: number;
 };
+
+export type Roll20ObjectPool = Record<string, any>;

@@ -1,5 +1,10 @@
 import createCustomTableConstructor from "./createCustomTableConstructor";
-import { RankedTableItem, RankedTableItemKey } from "./types";
+import {
+    CustomTableClassCreator,
+    CustomTableConstructor,
+    RankedTableItem,
+    RankedTableItemKey,
+} from "./types";
 
 import { Logger } from "../Logger";
 import { Id } from "../Roll20Object";

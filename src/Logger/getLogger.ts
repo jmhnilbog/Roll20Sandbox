@@ -9,22 +9,20 @@ const fallbackEmissionFn = (...rest: any[]) => {
     logArchive.push(rest);
 };
 
-let defaultEmissionFnForEnvironment: typeof fallbackEmissionFn;
+let defaultEmissionFnForEnvironment: typeof fallbackEmissionFn = fallbackEmissionFn;
 try {
     defaultEmissionFnForEnvironment = log;
 } catch (err) {
-    //
-    true;
-}
-try {
-    if (console && console?.log) {
-        defaultEmissionFnForEnvironment = (...rest: any[]) => {
-            console.log(...rest);
-        };
+    try {
+        if (!defaultEmissionFnForEnvironment && console && console?.log) {
+            defaultEmissionFnForEnvironment = (...rest: any[]) => {
+                console.log(...rest);
+            };
+        }
+    } catch (err) {
+        // OK....
+        true;
     }
-} catch (err) {
-    //
-    true;
 }
 
 /**
@@ -33,7 +31,7 @@ try {
 export const getLogger = ({
     logLevel = "INFO",
     logName = "LOG",
-    emissionFn = defaultEmissionFnForEnvironment || fallbackEmissionFn,
+    emissionFn = defaultEmissionFnForEnvironment,
 }: Partial<LoggerConfiguration> = {}) => {
     const logLevelAsNumber = isNaN(Number(logLevel))
         ? LOG_LEVEL[logLevel as keyof typeof LOG_LEVEL]

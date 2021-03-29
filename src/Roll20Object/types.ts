@@ -15,7 +15,7 @@ export interface Roll20ObjectInterface<
 
 export type JSONString = Brand<string, "JSONString">;
 export type TurnOrder = Brand<string, "JSONStringTurnOrder">;
-export type Id = Brand<string, "Id">;
+export type Id = string; //Brand<string, "Id">;
 
 export type PageId = Id;
 export type PlayerId = Id;
@@ -209,7 +209,7 @@ export type Roll20ObjectShapeTypeMap = {
     graphic: {
         readonly _type: "graphic";
         readonly _subtype: "token" | "card";
-        readonly _id: string;
+        readonly _id: Id;
         readonly _pageid?: PageId;
         readonly _cardid?: Id;
         imgsrc?: string;
@@ -397,6 +397,31 @@ export type Roll20ObjectShapeTypeMap = {
         weight: string;
     };
 };
+
+export type Roll20ObjectShape = Values<Roll20ObjectShapeTypeMap>;
+// export type Roll20ObjectTypedShape<T extends Roll20ObjectType> = Roll20ObjectShape['_type'] extends T ? Roll20ObjectShape : never;
+
+// export type Roll20ObjectPartialShape<T extends Roll20ObjectType = Roll20ObjectType> = {
+//     _type: T;
+// } & Partial<Roll20ObjectShapeTypeMap[T]>
+
+// export type Roll20ObjectPartialShape<T extends Roll20ObjectType> = Require<
+//     Partial<Roll20ObjectShapeTypeMap[T]>,
+//     "_type"
+// >;
+
+// type XXXX = Roll20ObjectPartialShape<"macro">['_type'];
+// const xxxx: Roll20ObjectPartialShape = {
+//     _type: "macro"
+// }
+
+// const c: Roll20ObjectPartialShape<"graphic"> = {
+//     _type: "graphic",
+// };
+
+// const X:Roll20ObjectPartialShape = {
+//     _type: "rollabletable"
+// }
 
 export type IdGenerator = () => Id;
 export type EventGenerator = (

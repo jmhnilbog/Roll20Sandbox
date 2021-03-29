@@ -17,7 +17,12 @@ export interface CustomTableInterface<T> {
 
 export interface CustomTableConstructor<T> {
     new (
-        table: Roll20ObjectInterface<"rollabletable">
+        table: Roll20ObjectInterface<"rollabletable">,
+        options?: any
+    ): CustomTableInterface<T>;
+    getTable(
+        table: Roll20ObjectInterface<"rollabletable">,
+        options?: any
     ): CustomTableInterface<T>;
 }
 
