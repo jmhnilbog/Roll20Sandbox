@@ -1,0 +1,43 @@
+---
+name: Burning Sputum
+level: Mama Hungry 1
+range: 10′ or greater
+timeToCast: 1 action or more
+save: Reflex
+description: |
+    The caster takes a hard, normally inedible object and bites and chews it; the success of the casting protects the caster from the usual effects of biting such things. The caster them spits the crumbled debris, which bursts into flames as it leaves the caster's mouth.
+
+    Certain materials may have additional effects when used with this spell.
+
+    Every failed casting of this spell causes 1d4 spellburn damage to the caster's mouth.
+MANIFESTATION:
+    - nearby creatures smell smoke
+    - caster's mouth left full of ash
+CORRUPTION:
+    - caster develops pica
+    - caster's teeth soften to the hardness of firm gums
+    - (MINOR-CORRUPTION)
+    - (MINOR-CORRUPTION)
+    - (MAJOR-CORRUPTION)
+    - (MAJOR-CORRUPTION)
+MISFIRE:
+    - Caster's mouth burns, causing an additional 1d4 spellburn and difficulty speaking until it heals.
+    - Caster is nauseated, retching (-2 to all rolls) for 1d4 rounds.
+    - Caster becomes fantasically thirsty.
+CAST:
+    -Infinity: Lost! Failure! **Worse!** (CAST-1 ((1d6+Luck))) **and** ((1d4)) spellburn
+    2: Lost! Failure **and** ((1d4)) spellburn.
+    8: Flaming spittle reaches **up to 10'**, doing **1 damage** to **1 target**. The **target may catch flame should it fail a Reflex save**.
+    10: Flaming spittle reaches **up to 20'**, doing **1 damage** to **1 target**. The **target may catch flame should it fail a Reflex save**.
+    12: Flaming spittle reaches **up to 20'**, doing **((1d4)) damage** to **1 target**. The **target may catch flame should it fail a Reflex save**.
+    14: Flaming spittle reaches **up to 20'**, doing **((2d4)) damage** to **2 targets within 5' of each other**. The **targets may catch flame should they fail a Reflex save**.
+    16: Flaming spittle reaches **up to 30'**, doing **((2d4)) damage** to **2 targets within 5' of each other**. The **targets may catch flame should they fail a Reflex save**.
+    18: You may immediately spit "(CAST ((16)))" **or** spend an additional action chewing to spit flaming bits **up to 30'**, doing **((3d4)) damage** to **3 targets within 5' of each other**. The **targets may catch flame should they fail a Reflex save**.
+    20: You may immediately spit "(CAST ((16)))" **or** spend an additional action chewing to spit flaming bits **up to 30'**, at an area with a **radius of 20'**, doing **((1d4)) damage** to targets within. The **hazard remains for ((1d4)) rounds**. The **targets may catch flame should they fail a Reflex save**.
+    24: You may immediately spit "(CAST ((16)))" **or** spend an additional action chewing to spit flaming bits **up to 60'**, at an area with a **radius of 20'**, doing **((1d4)) damage** to targets within. The **hazard remains for ((1d4)) rounds**. The **targets may catch flame should they fail a Reflex save**.
+    26: You may immediately spit "(CAST ((16)))" **or** spend an additional action chewing to spit flaming bits **up to 60'**, at an area with a **radius of 30'**, doing **((2d4)) damage** to targets within. The **hazard remains for ((1d4)) rounds**. The **targets may catch flame should they fail a Reflex save**.
+    28: You may immediately spit "(CAST ((16)))" **or** spend an additional action chewing "(CAST ((28)))" **or** spend an additional action swallowing and vomiting forth flaming debris in a **cone, 60' long and 20' wide**, doing **4d4 damage** within it, **igniting flammable targets** and **knocking them prone should they fail a Reflex save**.
+CAST-1:
+    -Infinity: (CORRUPTION) and (MISFIRE)
+    1: (CORRUPTION)
+    2: (MISFIRE)

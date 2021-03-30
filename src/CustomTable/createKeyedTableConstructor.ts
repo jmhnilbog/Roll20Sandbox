@@ -1,29 +1,29 @@
 import createCustomTableConstructor from "./createCustomTableConstructor";
-import { RankedTableItem, RankedTableItemKey } from "./types";
+import { KeyedTableItem, KeyedTableItemKey } from "./types";
 
 import { Logger } from "../Logger";
 import { Id } from "../Roll20Object";
 import { Sandbox } from "../Roll20Sandbox";
 
 /**
- * Creates a RankedTable constructor.
+ * Creates a KeyedTable constructor.
  */
-export const createRankedTableConstructor = ({
+export const createKeyedTableConstructor = ({
     sandbox,
     logger,
 }: {
     sandbox?: Sandbox;
     logger?: Logger;
 } = {}) => {
-    const RankedTable = createCustomTableConstructor<
-        RankedTableItem,
-        RankedTableItemKey
+    const KeyedTable = createCustomTableConstructor<
+        KeyedTableItem,
+        KeyedTableItemKey
     >({
         logger,
         sandbox,
         /**
-         * The RankedTable parser splits a TableItem's name by the first
-         * instance of the supplied delimiter, into a number ("minValue")
+         * The KeyedTable parser splits a TableItem's name by the first
+         * instance of the supplied delimiter, into a key ("key")
          * and a string ("result").
          * @param obj - a tableitem
          * @param index - the index at which the tableitem was found within the associated table.
@@ -46,15 +46,12 @@ export const createRankedTableConstructor = ({
             const weight = obj.get("weight");
             const name = obj.get("name");
             const tmp = new RegExp(`^(.+?)${delimiter}(.+)$`).exec(name);
-            const [minValue, result] = tmp
-                ? [tmp[1], tmp[2]]
-                : [undefined, name];
-            const asNumber = Number(minValue);
+            const [key, result] = tmp ? [tmp[1], tmp[2]] : ["", name];
             const parsed = {
                 tableItemId: obj.id,
                 tableIndex: index,
                 rollableTableId: obj.get("_rollabletableid") as Id,
-                minValue: asNumber,
+                key,
                 result,
                 weight,
             } as const;
@@ -69,7 +66,7 @@ export const createRankedTableConstructor = ({
             return parsed;
         },
         /**
-         * The RankedTable getter finds the item with the least minValue equal to
+         * The KeyedTable getter finds the item with the least minValue equal to
          * or less than the supplied key.
          * @param items
          * @param key
@@ -77,25 +74,12 @@ export const createRankedTableConstructor = ({
          */
         getter: (items, key, options: any = {}) => {
             logger?.trace(`getter(${items}, ${key}, ${options})`);
-            const pickable = items.filter(
-                (item) => typeof item.minValue !== "undefined"
-            );
-            logger?.info(`${pickable.length} pickable items`);
-            const sorted = pickable.sort(
-                (a: any, b: any) => a.minValue - b.minValue
-            );
-            logger?.info(sorted);
-            let smallest = items[0];
-            let picked = smallest;
-            // let largest = items[items.length - 1];
-            sorted.forEach((item) => {
-                if (item.minValue <= key) {
-                    picked = item;
-                }
-            });
-            logger?.trace(`getter(${items}, ${key}, ${options}): ${[picked]}`);
-            return [picked];
+            const pickable = items.filter((item) => item.key === key);
+            logger?.info(`${pickable.length} items picked`);
+
+            logger?.trace(`getter(${items}, ${key}, ${options}): ${pickable}`);
+            return pickable;
         },
     });
-    return RankedTable;
+    return KeyedTable;
 };

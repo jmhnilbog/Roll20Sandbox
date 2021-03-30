@@ -13,7 +13,7 @@ export const createCustomTableMessageHandler = <T>({
 }) => {
     const inlineRegExp = /(\[\[1t\[([A-Z0-9]+) (\d+)\]\]\])/g;
     const handler = (msg: ChatMessage) => {
-        logger?.trace(`handler(${JSON.stringify(msg)})`);
+        //logger?.trace(`handler(${JSON.stringify(msg)})`);
         let result;
         let content = msg.content;
         while ((result = inlineRegExp.exec(content))) {
@@ -34,8 +34,10 @@ export const createCustomTableMessageHandler = <T>({
 
             // replace the text of the message.
             content = content.replace(all, value.join(", "));
+            logger?.info(`Replaced custom table reference: ${content}`);
         }
-        sandbox.sendChat(msg.who, content);
+        // TODO: pass along change
+        //sandbox.sendChat(msg.who, content);
     };
     return handler;
 };

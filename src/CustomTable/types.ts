@@ -4,18 +4,28 @@ export type RankedTableItem = {
     tableItemId: Id;
     tableIndex: number;
     rollableTableId: Id;
-    minValue: number;
+    minValue: RankedTableItemKey;
     result: string;
     weight: string;
 };
 export type RankedTableItemKey = number;
+
+export type KeyedTableItem = {
+    tableItemId: Id;
+    tableIndex: number;
+    rollableTableId: Id;
+    key: KeyedTableItemKey;
+    result: string;
+    weight: string;
+};
+export type KeyedTableItemKey = number | string;
 
 export interface CustomTableInterface<T> {
     getAllItems(): T[];
     getAtKey(key: any): T[];
 }
 
-export interface CustomTableConstructor<T> {
+export interface CustomTableConstructor<T = {}> {
     new (
         table: Roll20ObjectInterface<"rollabletable">,
         options?: any
@@ -36,7 +46,3 @@ export type CustomTableGetter<T, K> = (
     key: K,
     options?: any
 ) => T[];
-
-export type CustomTableClassCreator = <T>(obj: {
-    parser: CustomTableParser<T>;
-}) => CustomTableConstructor<T>;

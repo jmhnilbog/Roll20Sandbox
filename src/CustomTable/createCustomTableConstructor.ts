@@ -16,7 +16,7 @@ import getTopLevelScope from "../util/getTopLevelScope";
  * NOTE: while you can use this without a supplied sandbox object, it is only guaranteed
  * to actually work within the actual Roll20 sandbox environment.
  */
-export const createCustomTableConstructor = <T, K>({
+export const createCustomTableConstructor = <T = {}, K = {}>({
     parser,
     getter,
     sandbox,
@@ -59,6 +59,7 @@ export const createCustomTableConstructor = <T, K>({
          */
         getAllItems() {
             logger?.trace(`getAllItems()`);
+
             const { findObjs } = sandbox || getTopLevelScope();
             if (!findObjs) {
                 throw new Error(`No findObjs() function found.`);

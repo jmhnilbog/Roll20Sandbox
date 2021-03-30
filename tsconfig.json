@@ -2,7 +2,7 @@
     "exclude": ["./build/**/*"],
     "include": ["./lib/**/*", "./src/**/*", "./**/*.d.ts"],
     "compilerOptions": {
-        "target": "es2016",
+        "target": "es2019",
         "moduleResolution": "node",
         /* Visit https://aka.ms/tsconfig.json to read more about this file */
 

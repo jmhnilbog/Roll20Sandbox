@@ -87,3 +87,9 @@ export type Coord2D = {
 };
 
 export type Roll20ObjectPool = Record<string, any>;
+
+export type Roll20ObjectTypedShape<T extends Roll20ObjectType> = {
+    _type: T;
+} & {
+    [K in keyof Roll20ObjectShapeTypeMap[T]]?: Roll20ObjectShapeTypeMap[T][K];
+};

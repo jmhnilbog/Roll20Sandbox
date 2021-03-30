@@ -132,7 +132,7 @@ createRoll20Sandbox({
                     return;
                 }
 
-                sandbox.sendChat("", `!rt ${value[0].result}`);
+                sandbox.sendChat("_**POOF!**_", `!rt ${value[0].result}`);
                 return;
             }
         );

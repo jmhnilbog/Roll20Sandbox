@@ -20,6 +20,7 @@ import {
     FxNames,
     Roll20EventName,
     Roll20ObjectPool,
+    Roll20ObjectTypedShape,
 } from "./types";
 
 // TODO: type wrappers
@@ -125,15 +126,9 @@ export const createRoll20Sandbox = async ({
             .filter(cb) as Roll20ObjectInterface[];
     };
 
-    type X<T extends Roll20ObjectType> = {
-        _type: T;
-    } & {
-        [K in keyof Roll20ObjectShapeTypeMap[T]]: Roll20ObjectShapeTypeMap[T][K];
-    };
-
     type FindObjs = {
         <T extends Roll20ObjectType = Roll20ObjectType>(
-            obj: X<T>,
+            obj: Roll20ObjectTypedShape<T>,
             options?: {
                 caseInsensitive?: boolean;
             }
@@ -147,7 +142,9 @@ export const createRoll20Sandbox = async ({
     };
 
     const findObjs: FindObjs = <T extends Roll20ObjectType = Roll20ObjectType>(
-        obj: Partial<Values<Roll20ObjectShapeTypeMap>> | X<T>,
+        obj:
+            | Partial<Values<Roll20ObjectShapeTypeMap>>
+            | Roll20ObjectTypedShape<T>,
         { caseInsensitive = false }: { caseInsensitive?: boolean } = {}
     ) => {
         logger?.trace(
@@ -207,7 +204,10 @@ export const createRoll20Sandbox = async ({
             logger?.trace(`Campaign(): ${_private._campaign}`);
             return _private._campaign;
         },
-        createObj: <T extends Roll20ObjectType>(_type: T, obj: any) => {
+        createObj: <T extends Roll20ObjectType>(
+            _type: T,
+            obj: Partial<Roll20ObjectShapeTypeMap[T]>
+        ) => {
             logger?.trace(`createObj(${_type}, ${JSON.stringify(obj)})`);
             const r = new Roll20Object(_type, obj);
             _private._pool[r.id] = r;

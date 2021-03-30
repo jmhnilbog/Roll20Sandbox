@@ -2188,7 +2188,7 @@ exports.createCustomTableMessageHandler = void 0;
 const createCustomTableMessageHandler = ({ sandbox, logger, TableConstructor, }) => {
     const inlineRegExp = /(\[\[1t\[([A-Z0-9]+) (\d+)\]\]\])/g;
     const handler = (msg) => {
-        logger === null || logger === void 0 ? void 0 : logger.trace(`handler(${JSON.stringify(msg)})`);
+        //logger?.trace(`handler(${JSON.stringify(msg)})`);
         let result;
         let content = msg.content;
         while ((result = inlineRegExp.exec(content))) {
@@ -2205,13 +2205,80 @@ const createCustomTableMessageHandler = ({ sandbox, logger, TableConstructor, })
             const value = customTable.getAtKey(key);
             // replace the text of the message.
             content = content.replace(all, value.join(", "));
+            logger === null || logger === void 0 ? void 0 : logger.info(`Replaced custom table reference: ${content}`);
         }
-        sandbox.sendChat(msg.who, content);
+        // TODO: pass along change
+        //sandbox.sendChat(msg.who, content);
     };
     return handler;
 };
 exports.createCustomTableMessageHandler = createCustomTableMessageHandler;
 exports.default = exports.createCustomTableMessageHandler;
+
+
+/***/ }),
+
+/***/ 895:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createKeyedTableConstructor = void 0;
+const createCustomTableConstructor_1 = __importDefault(__nccwpck_require__(209));
+/**
+ * Creates a KeyedTable constructor.
+ */
+const createKeyedTableConstructor = ({ sandbox, logger, } = {}) => {
+    const KeyedTable = createCustomTableConstructor_1.default({
+        logger,
+        sandbox,
+        /**
+         * The KeyedTable parser splits a TableItem's name by the first
+         * instance of the supplied delimiter, into a key ("key")
+         * and a string ("result").
+         * @param obj - a tableitem
+         * @param index - the index at which the tableitem was found within the associated table.
+         * @param options.delimiter - a string, which must be escaped for RegExps.
+         */
+        parser: (obj, index, { delimiter = "=", } = {}) => {
+            logger === null || logger === void 0 ? void 0 : logger.trace(`parser(${JSON.stringify(obj)}, ${index}, { delimiter: ${delimiter} })`);
+            const weight = obj.get("weight");
+            const name = obj.get("name");
+            const tmp = new RegExp(`^(.+?)${delimiter}(.+)$`).exec(name);
+            const [key, result] = tmp ? [tmp[1], tmp[2]] : ["", name];
+            const parsed = {
+                tableItemId: obj.id,
+                tableIndex: index,
+                rollableTableId: obj.get("_rollabletableid"),
+                key,
+                result,
+                weight,
+            };
+            logger === null || logger === void 0 ? void 0 : logger.trace(`parser(${JSON.stringify(obj)}, ${index}, { delimiter: ${delimiter} }) : ${JSON.stringify(parsed)}`);
+            return parsed;
+        },
+        /**
+         * The KeyedTable getter finds the item with the least minValue equal to
+         * or less than the supplied key.
+         * @param items
+         * @param key
+         * @param options
+         */
+        getter: (items, key, options = {}) => {
+            logger === null || logger === void 0 ? void 0 : logger.trace(`getter(${items}, ${key}, ${options})`);
+            const pickable = items.filter((item) => item.key === key);
+            logger === null || logger === void 0 ? void 0 : logger.info(`${pickable.length} items picked`);
+            logger === null || logger === void 0 ? void 0 : logger.trace(`getter(${items}, ${key}, ${options}): ${pickable}`);
+            return pickable;
+        },
+    });
+    return KeyedTable;
+};
+exports.createKeyedTableConstructor = createKeyedTableConstructor;
 
 
 /***/ }),
@@ -2300,7 +2367,7 @@ exports.createRankedTableConstructor = createRankedTableConstructor;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createRankedTableConstructor = exports.RankedTable = exports.createCustomTableMessageHandler = exports.createCustomTableConstructor = void 0;
+exports.createKeyedTableConstructor = exports.KeyedTable = exports.createRankedTableConstructor = exports.RankedTable = exports.createCustomTableMessageHandler = exports.createCustomTableConstructor = void 0;
 var createCustomTableConstructor_1 = __nccwpck_require__(209);
 Object.defineProperty(exports, "createCustomTableConstructor", ({ enumerable: true, get: function () { return createCustomTableConstructor_1.createCustomTableConstructor; } }));
 var createCustomTableMessageHandler_1 = __nccwpck_require__(95);
@@ -2308,24 +2375,18 @@ Object.defineProperty(exports, "createCustomTableMessageHandler", ({ enumerable:
 const createRankedTableConstructor_1 = __nccwpck_require__(312);
 Object.defineProperty(exports, "createRankedTableConstructor", ({ enumerable: true, get: function () { return createRankedTableConstructor_1.createRankedTableConstructor; } }));
 exports.RankedTable = createRankedTableConstructor_1.createRankedTableConstructor();
+const createKeyedTableConstructor_1 = __nccwpck_require__(895);
+Object.defineProperty(exports, "createKeyedTableConstructor", ({ enumerable: true, get: function () { return createKeyedTableConstructor_1.createKeyedTableConstructor; } }));
+exports.KeyedTable = createKeyedTableConstructor_1.createKeyedTableConstructor();
 
 
 /***/ }),
 
 /***/ 401:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const Roll20Sandbox_1 = __nccwpck_require__(392);
 const Logger_1 = __nccwpck_require__(698);
@@ -2353,9 +2414,9 @@ Roll20Sandbox_1.createRoll20Sandbox({
     logger: logger.child({
         logName: "Roll20Sandbox",
     }),
-}).then((sandbox) => __awaiter(void 0, void 0, void 0, function* () {
+}).then(async (sandbox) => {
     // Once we're ready...
-    sandbox.on("ready", () => __awaiter(void 0, void 0, void 0, function* () {
+    sandbox.on("ready", async () => {
         logger.trace("on(ready) heard.");
         // make the sandbox functions 'global' so other libraries think they are
         // within the sandbox.
@@ -2428,7 +2489,7 @@ Roll20Sandbox_1.createRoll20Sandbox({
                 logger.error(`Expected a result, but found ${value.length === 0 ? "none" : "more than one."}`);
                 return;
             }
-            sandbox.sendChat("", `!rt ${value[0].result}`);
+            sandbox.sendChat("_**POOF!**_", `!rt ${value[0].result}`);
             return;
         });
         const manifestDCCSpell = _registerCommand("manifest", (name) => {
@@ -2463,8 +2524,8 @@ Roll20Sandbox_1.createRoll20Sandbox({
             return;
         }
         testElfwardLocally(sandbox);
-    }));
-}));
+    });
+});
 const importLibs = () => {
     "REPLACE WITH LIBS";
 };
@@ -2775,24 +2836,277 @@ exports.getShapeDefaults = void 0;
  */
 const getShapeDefaults = ({ idGenerator, }) => {
     return {
-        ability: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _characterid: "", name: "", description: "", action: "", istokenaction: false }, obj), { _type: "ability" })),
-        attribute: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _characterid: "", name: "", current: "", max: "" }, obj), { _type: "attribute" })),
-        campaign: (obj = {}) => (Object.assign(Object.assign({ _id: "root", turnorder: "", initiativepage: false, playerpageid: false, playerspecificpages: false, _journalfolder: "", _jukeboxfolder: "" }, obj), { _type: "campaign" })),
-        card: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", avatar: "", _deckid: "" }, obj), { _type: "card" })),
-        character: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", avatar: "", bio: "", gmnotes: "", archived: false, inplayerjournals: "", controlledby: "", _defaulttoken: "" }, obj), { _type: "character" })),
-        custfx: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", definition: {} }, obj), { _type: "custfx" })),
-        deck: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "", _currentDeck: "", _currentIndex: -1, _currentCardShown: true, showplayers: true, playerscandraw: true, avatar: "", shown: false, players_seenumcards: true, players_seefrontofcards: false, gm_seenumcards: true, gm_seefrontofcards: false, infinitecards: false, _cardSequencer: -1, cardsplayed: "faceup", defaultheight: "", defaultwidth: "", discardpilemode: "none", _discardPile: "" }, obj), { _type: "deck" })),
-        graphic: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _subtype: "token", left: 0, top: 0, width: 0, height: 0, rotation: 0, layer: "", isdrawing: false, flipv: false, fliph: false, name: "", gmnotes: "", controlledby: "", bar1_value: "", bar2_value: "", bar3_value: "", bar1_max: "", bar2_max: "", bar3_max: "", aura1_radius: "", aura2_radius: "", aura1_color: "#FFFF99", aura2_color: "#59E594", aura1_square: false, aura2_square: false, tint_color: "transparent", statusmarkers: "", token_markers: "", showname: false, showplayers_name: false, showplayers_bar1: false, showplayers_bar2: false, showplayers_bar3: false, showplayers_aura1: false, showplayers_aura2: false, playersedit_name: true, playersedit_bar1: true, playersedit_bar2: true, playersedit_bar3: true, playersedit_aura1: true, playersedit_aura2: true, light_radius: "", light_dimradius: "", light_otherplayers: false, light_hassight: false, light_angle: "360", light_losangle: "360", lastmove: "", light_multiplier: "1", imgsrc: "", _pageid: idGenerator(), adv_fow_view_distance: "" }, obj), { _type: "graphic" })),
-        hand: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator() }, obj), { _parentid: "", currentView: "bydeck", currentHand: "", _type: "hand" })),
-        handout: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), avatar: "", name: "Mysterious Note", notes: "", gmnotes: "", inplayerjournals: "", archived: false, controlledby: "" }, obj), { _type: "handout" })),
-        jukeboxtrack: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), playing: false, softstop: false, title: "", volume: 30, loop: false }, obj), { _type: "jukeboxtrack" })),
-        macro: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _playerid: "", name: "", action: "", visibleto: "", istokenaction: false }, obj), { _type: "macro" })),
-        page: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _zorder: "", name: "", showgrid: true, showdarkness: false, showlighting: false, width: 25, height: 25, snapping_increment: 1, grid_opacity: 0.5, fog_opacity: 0.35, background_color: "#FFFFFF", gridcolor: "#C0C0C0", grid_type: "square", scale_number: 5, scale_units: "ft", gridlabels: false, diagonaltype: "foure", archived: false, lightupdatedrop: false, lightenforcelos: false, lightrestrictmove: false, lightglobalillum: false }, obj), { _type: "page" })),
-        path: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _pageid: idGenerator(), _path: "", fill: "transparent", stroke: "#000000", rotation: 0, layer: "", stroke_width: 5, width: 0, height: 0, top: 0, left: 0, scaleX: 1, scaleY: 1, controlledby: "" }, obj), { _type: "path" })),
-        player: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _d20userid: idGenerator(), _displayname: "", _online: false, _lastpage: "", _macrobar: "", speakingas: "", color: "#13B9F0", showmacrobar: false }, obj), { _type: "player" })),
-        rollabletable: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), name: "new-table", showplayers: true }, obj), { _type: "rollabletable" })),
-        text: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _pageid: idGenerator(), top: 0, left: 0, width: 0, height: 0, text: "", font_size: 16, rotation: 0, color: "rgb(0, 0, 0)", font_family: "Arial", layer: "", controlledby: "" }, obj), { _type: "text" })),
-        tableitem: (obj = {}) => (Object.assign(Object.assign({ _id: idGenerator(), _rollabletableid: "", name: "new-table", avatar: "", weight: "1" }, obj), { _type: "tableitem" })),
+        ability: (obj = {}) => ({
+            _id: idGenerator(),
+            _characterid: "",
+            name: "",
+            description: "",
+            action: "",
+            istokenaction: false,
+            ...obj,
+            _type: "ability",
+        }),
+        attribute: (obj = {}) => ({
+            _id: idGenerator(),
+            _characterid: "",
+            name: "",
+            current: "",
+            max: "",
+            ...obj,
+            _type: "attribute",
+        }),
+        campaign: (obj = {}) => ({
+            _id: "root",
+            turnorder: "",
+            initiativepage: false,
+            playerpageid: false,
+            playerspecificpages: false,
+            _journalfolder: "",
+            _jukeboxfolder: "",
+            ...obj,
+            _type: "campaign",
+        }),
+        card: (obj = {}) => ({
+            _id: idGenerator(),
+            name: "",
+            avatar: "",
+            _deckid: "",
+            ...obj,
+            _type: "card",
+        }),
+        character: (obj = {}) => ({
+            _id: idGenerator(),
+            name: "",
+            avatar: "",
+            bio: "",
+            gmnotes: "",
+            archived: false,
+            inplayerjournals: "",
+            controlledby: "",
+            _defaulttoken: "",
+            ...obj,
+            _type: "character",
+        }),
+        custfx: (obj = {}) => ({
+            _id: idGenerator(),
+            name: "",
+            definition: {},
+            ...obj,
+            _type: "custfx",
+        }),
+        deck: (obj = {}) => ({
+            _id: idGenerator(),
+            name: "",
+            _currentDeck: "",
+            _currentIndex: -1,
+            _currentCardShown: true,
+            showplayers: true,
+            playerscandraw: true,
+            avatar: "",
+            shown: false,
+            players_seenumcards: true,
+            players_seefrontofcards: false,
+            gm_seenumcards: true,
+            gm_seefrontofcards: false,
+            infinitecards: false,
+            _cardSequencer: -1,
+            cardsplayed: "faceup",
+            defaultheight: "",
+            defaultwidth: "",
+            discardpilemode: "none",
+            _discardPile: "",
+            ...obj,
+            _type: "deck",
+        }),
+        graphic: (obj = {}) => ({
+            _id: idGenerator(),
+            _subtype: "token",
+            left: 0,
+            top: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            layer: "",
+            isdrawing: false,
+            flipv: false,
+            fliph: false,
+            name: "",
+            gmnotes: "",
+            controlledby: "",
+            bar1_value: "",
+            bar2_value: "",
+            bar3_value: "",
+            bar1_max: "",
+            bar2_max: "",
+            bar3_max: "",
+            aura1_radius: "",
+            aura2_radius: "",
+            aura1_color: "#FFFF99",
+            aura2_color: "#59E594",
+            aura1_square: false,
+            aura2_square: false,
+            tint_color: "transparent",
+            statusmarkers: "",
+            token_markers: "",
+            showname: false,
+            showplayers_name: false,
+            showplayers_bar1: false,
+            showplayers_bar2: false,
+            showplayers_bar3: false,
+            showplayers_aura1: false,
+            showplayers_aura2: false,
+            playersedit_name: true,
+            playersedit_bar1: true,
+            playersedit_bar2: true,
+            playersedit_bar3: true,
+            playersedit_aura1: true,
+            playersedit_aura2: true,
+            light_radius: "",
+            light_dimradius: "",
+            light_otherplayers: false,
+            light_hassight: false,
+            light_angle: "360",
+            light_losangle: "360",
+            lastmove: "",
+            light_multiplier: "1",
+            imgsrc: "",
+            _pageid: idGenerator(),
+            adv_fow_view_distance: "",
+            ...obj,
+            _type: "graphic",
+        }),
+        hand: (obj = {}) => ({
+            _id: idGenerator(),
+            ...obj,
+            _parentid: "",
+            currentView: "bydeck",
+            currentHand: "",
+            _type: "hand",
+        }),
+        handout: (obj = {}) => ({
+            _id: idGenerator(),
+            avatar: "",
+            name: "Mysterious Note",
+            notes: "",
+            gmnotes: "",
+            inplayerjournals: "",
+            archived: false,
+            controlledby: "",
+            ...obj,
+            _type: "handout",
+        }),
+        jukeboxtrack: (obj = {}) => ({
+            _id: idGenerator(),
+            playing: false,
+            softstop: false,
+            title: "",
+            volume: 30,
+            loop: false,
+            ...obj,
+            _type: "jukeboxtrack",
+        }),
+        macro: (obj = {}) => ({
+            _id: idGenerator(),
+            _playerid: "",
+            name: "",
+            action: "",
+            visibleto: "",
+            istokenaction: false,
+            ...obj,
+            _type: "macro",
+        }),
+        page: (obj = {}) => ({
+            _id: idGenerator(),
+            _zorder: "",
+            name: "",
+            showgrid: true,
+            showdarkness: false,
+            showlighting: false,
+            width: 25,
+            height: 25,
+            snapping_increment: 1,
+            grid_opacity: 0.5,
+            fog_opacity: 0.35,
+            background_color: "#FFFFFF",
+            gridcolor: "#C0C0C0",
+            grid_type: "square",
+            scale_number: 5,
+            scale_units: "ft",
+            gridlabels: false,
+            diagonaltype: "foure",
+            archived: false,
+            lightupdatedrop: false,
+            lightenforcelos: false,
+            lightrestrictmove: false,
+            lightglobalillum: false,
+            ...obj,
+            _type: "page",
+        }),
+        path: (obj = {}) => ({
+            _id: idGenerator(),
+            _pageid: idGenerator(),
+            _path: "",
+            fill: "transparent",
+            stroke: "#000000",
+            rotation: 0,
+            layer: "",
+            stroke_width: 5,
+            width: 0,
+            height: 0,
+            top: 0,
+            left: 0,
+            scaleX: 1,
+            scaleY: 1,
+            controlledby: "",
+            ...obj,
+            _type: "path",
+        }),
+        player: (obj = {}) => ({
+            _id: idGenerator(),
+            _d20userid: idGenerator(),
+            _displayname: "",
+            _online: false,
+            _lastpage: "",
+            _macrobar: "",
+            speakingas: "",
+            color: "#13B9F0",
+            showmacrobar: false,
+            ...obj,
+            _type: "player",
+        }),
+        rollabletable: (obj = {}) => ({
+            _id: idGenerator(),
+            name: "new-table",
+            showplayers: true,
+            ...obj,
+            _type: "rollabletable",
+        }),
+        text: (obj = {}) => ({
+            _id: idGenerator(),
+            _pageid: idGenerator(),
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            text: "",
+            font_size: 16,
+            rotation: 0,
+            color: "rgb(0, 0, 0)",
+            font_family: "Arial",
+            layer: "",
+            controlledby: "",
+            ...obj,
+            _type: "text",
+        }),
+        tableitem: (obj = {}) => ({
+            _id: idGenerator(),
+            _rollabletableid: "",
+            name: "new-table",
+            avatar: "",
+            weight: "1",
+            ...obj,
+            _type: "tableitem",
+        }),
     };
 };
 exports.getShapeDefaults = getShapeDefaults;
@@ -2837,34 +3151,14 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createRoll20Sandbox = void 0;
 const Roll20Object_1 = __nccwpck_require__(333);
 const util_1 = __nccwpck_require__(604);
 __nccwpck_require__(79);
-const createRoll20Sandbox = ({ campaign, state, logger, pool = {}, idGenerator, 
+const createRoll20Sandbox = async ({ campaign, state, logger, pool = {}, idGenerator, 
 // @ts-ignore
-scope = util_1.getTopLevelScope(), wrappers = {}, }) => __awaiter(void 0, void 0, void 0, function* () {
+scope = util_1.getTopLevelScope(), wrappers = {}, }) => {
     // private variables for things handled behind the scenes
     // by the sandbox.
     const _private = {
@@ -3107,7 +3401,7 @@ scope = util_1.getTopLevelScope(), wrappers = {}, }) => __awaiter(void 0, void 0
     // also exist in the global scope, we'll use those instead.
     // If wrappers were passed in, we wrap whichever function we've found to use with them.
     const realSandbox = {};
-    yield Promise.all(Object.keys(sandbox).map((k) => __awaiter(void 0, void 0, void 0, function* () {
+    await Promise.all(Object.keys(sandbox).map(async (k) => {
         var _a;
         const topLevelScope = scope;
         const key = k;
@@ -3122,7 +3416,7 @@ scope = util_1.getTopLevelScope(), wrappers = {}, }) => __awaiter(void 0, void 0
             // if necessary, and other libraries expect it available globally from the jump.
             if (key === "_") {
                 logger === null || logger === void 0 ? void 0 : logger.info("Dynamically importing underscore library.");
-                const _b = yield Promise.resolve().then(() => __importStar(__nccwpck_require__(987))), { default: myDefault } = _b, rest = __rest(_b, ["default"]);
+                const { default: myDefault, ...rest } = await Promise.resolve().then(() => __importStar(__nccwpck_require__(987)));
                 const _ = Object.assign(myDefault, rest);
                 logger === null || logger === void 0 ? void 0 : logger.info("Imported as", _);
                 topLevelScope._ = _;
@@ -3137,7 +3431,7 @@ scope = util_1.getTopLevelScope(), wrappers = {}, }) => __awaiter(void 0, void 0
                 logger === null || logger === void 0 ? void 0 : logger.info(`Using mocked "${key}": ${(_a = sandbox[key]) === null || _a === void 0 ? void 0 : _a.toString()}.`);
             }
         }
-    })));
+    }));
     // const _applyWrappers = (wrappers: Wrappers = {}) => {
     //     logger?.trace(`_applyWrappers(${wrappers})`);
     //     Object.keys(wrappers).forEach((key) => {
@@ -3243,13 +3537,19 @@ scope = util_1.getTopLevelScope(), wrappers = {}, }) => __awaiter(void 0, void 0
     const _select = (selected) => {
         // TODO: implement selection
     };
-    return Object.assign(Object.assign({}, realSandbox), { _fireEvent,
+    return {
+        ...realSandbox,
+        _fireEvent,
         _registerCommand,
-        _isWithinSandbox, _global: util_1.getTopLevelScope(), _promote,
+        _isWithinSandbox,
+        _global: util_1.getTopLevelScope(),
+        _promote,
         _setAsGM,
         _dispose,
-        _select });
-});
+        _select,
+        //_applyWrappers,
+    };
+};
 exports.createRoll20Sandbox = createRoll20Sandbox;
 
 

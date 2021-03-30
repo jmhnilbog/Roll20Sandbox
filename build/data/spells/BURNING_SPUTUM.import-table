@@ -1,0 +1,42 @@
+!import-table --DCC-SPELL-BURNING_SPUTUM-MANIFESTATION --show
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-MANIFESTATION --nearby creatures smell smoke --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-MANIFESTATION --caster′s mouth left full of ash --1 --
+
+
+!import-table --DCC-SPELL-BURNING_SPUTUM-CORRUPTION --show
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CORRUPTION --caster develops pica --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CORRUPTION --caster′s teeth soften to the hardness of firm gums --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MINOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MINOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MAJOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CORRUPTION --<%%91%%><%%91%%>1t<%%91%%>MAJOR-CORRUPTION<%%93%%><%%93%%><%%93%%> --1 --
+
+
+!import-table --DCC-SPELL-BURNING_SPUTUM-MISFIRE --show
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-MISFIRE --Caster′s mouth burns, causing an additional 1d4 spellburn and difficulty speaking until it heals. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-MISFIRE --Caster is nauseated, retching (-2 to all rolls) for 1d4 rounds. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-MISFIRE --Caster becomes fantasically thirsty. --1 --
+
+
+!import-table --DCC-SPELL-BURNING_SPUTUM-CAST --show
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --2=Lost! Failure **and** <%%91%%><%%91%%>1d4<%%93%%><%%93%%> spellburn. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --8=Flaming spittle reaches **up to 10′**, doing **1 damage** to **1 target**. The **target may catch flame should it fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --10=Flaming spittle reaches **up to 20′**, doing **1 damage** to **1 target**. The **target may catch flame should it fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --12=Flaming spittle reaches **up to 20′**, doing **<%%91%%><%%91%%>1d4<%%93%%><%%93%%> damage** to **1 target**. The **target may catch flame should it fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --14=Flaming spittle reaches **up to 20′**, doing **<%%91%%><%%91%%>2d4<%%93%%><%%93%%> damage** to **2 targets within 5′ of each other**. The **targets may catch flame should they fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --16=Flaming spittle reaches **up to 30′**, doing **<%%91%%><%%91%%>2d4<%%93%%><%%93%%> damage** to **2 targets within 5′ of each other**. The **targets may catch flame should they fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --18=You may immediately spit "(DCC-SPELL-BURNING_SPUTUM-CAST <%%91%%><%%91%%>16<%%93%%><%%93%%>)" **or** spend an additional action chewing to spit flaming bits **up to 30′**, doing **<%%91%%><%%91%%>3d4<%%93%%><%%93%%> damage** to **3 targets within 5′ of each other**. The **targets may catch flame should they fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --20=You may immediately spit "(DCC-SPELL-BURNING_SPUTUM-CAST <%%91%%><%%91%%>16<%%93%%><%%93%%>)" **or** spend an additional action chewing to spit flaming bits **up to 30′**, at an area with a **radius of 20′**, doing **<%%91%%><%%91%%>1d4<%%93%%><%%93%%> damage** to targets within. The **hazard remains for <%%91%%><%%91%%>1d4<%%93%%><%%93%%> rounds**. The **targets may catch flame should they fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --24=You may immediately spit "(DCC-SPELL-BURNING_SPUTUM-CAST <%%91%%><%%91%%>16<%%93%%><%%93%%>)" **or** spend an additional action chewing to spit flaming bits **up to 60′**, at an area with a **radius of 20′**, doing **<%%91%%><%%91%%>1d4<%%93%%><%%93%%> damage** to targets within. The **hazard remains for <%%91%%><%%91%%>1d4<%%93%%><%%93%%> rounds**. The **targets may catch flame should they fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --26=You may immediately spit "(DCC-SPELL-BURNING_SPUTUM-CAST <%%91%%><%%91%%>16<%%93%%><%%93%%>)" **or** spend an additional action chewing to spit flaming bits **up to 60′**, at an area with a **radius of 30′**, doing **<%%91%%><%%91%%>2d4<%%93%%><%%93%%> damage** to targets within. The **hazard remains for <%%91%%><%%91%%>1d4<%%93%%><%%93%%> rounds**. The **targets may catch flame should they fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --28=You may immediately spit "(DCC-SPELL-BURNING_SPUTUM-CAST <%%91%%><%%91%%>16<%%93%%><%%93%%>)" **or** spend an additional action chewing "<%%91%%><%%91%%>1t<%%91%%>CAST <%%91%%><%%91%%>28<%%93%%><%%93%%><%%93%%><%%93%%><%%93%%>" **or** spend an additional action swallowing and vomiting forth flaming debris in a **cone, 60′ long and 20′ wide**, doing **4d4 damage** within it, **igniting flammable targets** and **knocking them prone should they fail a Reflex save**. --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST ---Infinity=Lost! Failure! **Worse!** (DCC-SPELL-BURNING_SPUTUM-CAST-1 <%%91%%><%%91%%>1d6+Luck<%%93%%><%%93%%>) **and** <%%91%%><%%91%%>1d4<%%93%%><%%93%%> spellburn --1 --
+
+
+!import-table --DCC-SPELL-BURNING_SPUTUM-CAST-1 --show
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST-1 --1=(DCC-SPELL-BURNING_SPUTUM-CORRUPTION) --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST-1 --2=(DCC-SPELL-BURNING_SPUTUM-MISFIRE) --1 --
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST-1 ---Infinity=(DCC-SPELL-BURNING_SPUTUM-CORRUPTION) and (DCC-SPELL-BURNING_SPUTUM-MISFIRE) --1 --
+
+
+!import-table-item --DCC-SPELL-BURNING_SPUTUM-CAST --[name=Burning Sputum][level=Mama Hungry 1][range=10′ or greater][timeToCast=1 action or more][save=Reflex][description=The caster takes a hard, normally inedible object and bites and chews it; the success of the casting protects the caster from the usual effects of biting such things. The caster them spits the crumbled debris, which bursts into flames as it leaves the caster′s mouth.\n\nCertain materials may have additional effects when used with this spell.\n\nEvery failed casting of this spell causes 1d4 spellburn damage to the caster′s mouth.\n] --1 --
